@@ -17,11 +17,11 @@ DB_USER = "langchain_agent"
 # Fetch the password securely from the .env file
 raw_password = os.getenv("DB_PASSWORD")
 
-# Add a safety check just in case the .env file is missing the variable
+#add a safety check just in case the .env file is missing the variable
 if not raw_password:
     raise ValueError("DB_PASSWORD is missing from your .env file!")
 
-# NO 'tcp:' prefix! Just the IP address
+#no 'tcp:' prefix Just the IP address
 DB_SERVER = "127.0.0.1" 
 DB_NAME = "sql_practise"
 
@@ -30,25 +30,25 @@ connection_string = (
     "?driver=ODBC+Driver+17+for+SQL+Server&TrustServerCertificate=yes"
 )
 
-# Initialize the SQLDatabase wrapper
+#initialize the SQLDatabase wrapper
 db = SQLDatabase.from_uri(connection_string)
 
-# 3. Initialize the Gemini LLM
+#initialize the Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="gemini-3.6-flash", 
     temperature=0
 )
 
-# 4. Create the SQL Agent
+#create the SQL Agent
 sql_sub_agent = create_sql_agent(
     llm=llm,
     db=db,
     agent_type="zero-shot-react-description", # Changed from tool-calling
     verbose=False,
-    handle_parsing_errors=True # Highly recommended for ReAct agents!
+    handle_parsing_errors=True # Highly recommended for ReAct agents
 )
 
-# 5. Run a Test Query
+#run a Test Query
 if __name__ == "__main__":
     print("Testing SQL Sub-Agent connection...")
     
@@ -58,3 +58,4 @@ if __name__ == "__main__":
     
     print("\n--- Final Agent Response ---")
     print(response["output"])
+
