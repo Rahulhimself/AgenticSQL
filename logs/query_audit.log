@@ -1,0 +1,66 @@
+[2026-08-26T10:57:28.166207] [BLOCKED] DROP TABLE users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.173072] [BLOCKED] drop table users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.177340] [BLOCKED] DROP DATABASE production | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.181869] [BLOCKED] DROP VIEW my_view | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.186624] [BLOCKED] DROP PROCEDURE sp_test | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.191465] [BLOCKED] TRUNCATE TABLE orders | Reason: Blocked: TRUNCATE TABLE detected in query
+[2026-08-26T10:57:28.196052] [BLOCKED] DELETE FROM customers | Reason: Blocked: DELETE FROM detected in query
+[2026-08-26T10:57:28.200351] [BLOCKED] DELETE FROM customers WHERE 1=1 | Reason: Blocked: DELETE FROM detected in query
+[2026-08-26T10:57:28.206002] [BLOCKED] ALTER TABLE users ADD COLUMN age INT | Reason: Blocked: ALTER statement detected in query
+[2026-08-26T10:57:28.211175] [BLOCKED] ALTER DATABASE mydb SET SINGLE_USER | Reason: Blocked: ALTER statement detected in query
+[2026-08-26T10:57:28.216500] [BLOCKED] INSERT INTO users VALUES (1, 'test') | Reason: Blocked: INSERT INTO detected in query
+[2026-08-26T10:57:28.222019] [BLOCKED] UPDATE users SET name='hacked' | Reason: Blocked: UPDATE statement detected in query
+[2026-08-26T10:57:28.228427] [BLOCKED] EXEC sp_executesql N'SELECT 1' | Reason: Blocked: EXEC/EXECUTE statement detected in query
+[2026-08-26T10:57:28.233709] [BLOCKED] EXECUTE xp_cmdshell 'dir' | Reason: Blocked: EXEC/EXECUTE statement detected in query
+[2026-08-26T10:57:28.240731] [BLOCKED] CREATE TABLE new_table (id INT) | Reason: Blocked: CREATE statement detected in query
+[2026-08-26T10:57:28.245695] [BLOCKED] CREATE DATABASE newdb | Reason: Blocked: CREATE statement detected in query
+[2026-08-26T10:57:28.250842] [BLOCKED] GRANT SELECT ON users TO hacker | Reason: Blocked: GRANT statement detected in query
+[2026-08-26T10:57:28.257190] [BLOCKED] REVOKE ALL FROM public | Reason: Blocked: REVOKE statement detected in query
+[2026-08-26T10:57:28.263257] [BLOCKED] SHUTDOWN | Reason: Blocked: SHUTDOWN command detected in query
+[2026-08-26T10:57:28.270570] [BLOCKED] xp_cmdshell 'whoami' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-26T10:57:28.277831] [BLOCKED] sp_configure 'show advanced options', 1 | Reason: Blocked: sp_configure (server configuration) detected in query
+[2026-08-26T10:57:28.283253] [BLOCKED] BULK INSERT users FROM 'file.csv' | Reason: Blocked: BULK INSERT detected in query
+[2026-08-26T10:57:28.288626] [BLOCKED] SELECT * FROM OPENROWSET('SQLNCLI', 'Server=evil') | Reason: Blocked: OPENROWSET (external data access) detected in query
+[2026-08-26T10:57:28.293692] [ALLOWED] SELECT * FROM users
+[2026-08-26T10:57:28.298798] [ALLOWED] SELECT COUNT(*) FROM orders
+[2026-08-26T10:57:28.303612] [ALLOWED] SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id
+[2026-08-26T10:57:28.309783] [ALLOWED] SELECT TOP 10 * FROM products ORDER BY price DESC
+[2026-08-26T10:57:28.314578] [ALLOWED] SELECT DISTINCT category FROM products
+[2026-08-26T10:57:28.319927] [ALLOWED] SELECT category, AVG(price) as avg_price, COUNT(*) as count FROM products GROUP BY category HAVING COUNT(*) > 5 ORDER BY avg_price DESC
+[2026-08-26T10:57:28.331932] [BLOCKED] DROP TABLE users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.332861] [BLOCKED] drop table users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.333792] [BLOCKED] Drop Table Users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T10:57:28.334650] [BLOCKED] dRoP tAbLe users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.069885] [BLOCKED] DROP TABLE users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.074940] [BLOCKED] drop table users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.080127] [BLOCKED] DROP DATABASE production | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.087636] [BLOCKED] DROP VIEW my_view | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.093151] [BLOCKED] DROP PROCEDURE sp_test | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.098676] [BLOCKED] TRUNCATE TABLE orders | Reason: Blocked: TRUNCATE TABLE detected in query
+[2026-08-26T11:17:19.104833] [BLOCKED] DELETE FROM customers | Reason: Blocked: DELETE FROM detected in query
+[2026-08-26T11:17:19.110651] [BLOCKED] DELETE FROM customers WHERE 1=1 | Reason: Blocked: DELETE FROM detected in query
+[2026-08-26T11:17:19.116725] [BLOCKED] ALTER TABLE users ADD COLUMN age INT | Reason: Blocked: ALTER statement detected in query
+[2026-08-26T11:17:19.123786] [BLOCKED] ALTER DATABASE mydb SET SINGLE_USER | Reason: Blocked: ALTER statement detected in query
+[2026-08-26T11:17:19.129530] [BLOCKED] INSERT INTO users VALUES (1, 'test') | Reason: Blocked: INSERT INTO detected in query
+[2026-08-26T11:17:19.138226] [BLOCKED] UPDATE users SET name='hacked' | Reason: Blocked: UPDATE statement detected in query
+[2026-08-26T11:17:19.143684] [BLOCKED] EXEC sp_executesql N'SELECT 1' | Reason: Blocked: EXEC/EXECUTE statement detected in query
+[2026-08-26T11:17:19.148757] [BLOCKED] EXECUTE xp_cmdshell 'dir' | Reason: Blocked: EXEC/EXECUTE statement detected in query
+[2026-08-26T11:17:19.158228] [BLOCKED] CREATE TABLE new_table (id INT) | Reason: Blocked: CREATE statement detected in query
+[2026-08-26T11:17:19.164197] [BLOCKED] CREATE DATABASE newdb | Reason: Blocked: CREATE statement detected in query
+[2026-08-26T11:17:19.171348] [BLOCKED] GRANT SELECT ON users TO hacker | Reason: Blocked: GRANT statement detected in query
+[2026-08-26T11:17:19.176861] [BLOCKED] REVOKE ALL FROM public | Reason: Blocked: REVOKE statement detected in query
+[2026-08-26T11:17:19.182886] [BLOCKED] SHUTDOWN | Reason: Blocked: SHUTDOWN command detected in query
+[2026-08-26T11:17:19.189386] [BLOCKED] xp_cmdshell 'whoami' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-26T11:17:19.196442] [BLOCKED] sp_configure 'show advanced options', 1 | Reason: Blocked: sp_configure (server configuration) detected in query
+[2026-08-26T11:17:19.203247] [BLOCKED] BULK INSERT users FROM 'file.csv' | Reason: Blocked: BULK INSERT detected in query
+[2026-08-26T11:17:19.209450] [BLOCKED] SELECT * FROM OPENROWSET('SQLNCLI', 'Server=evil') | Reason: Blocked: OPENROWSET (external data access) detected in query
+[2026-08-26T11:17:19.215661] [ALLOWED] SELECT * FROM users
+[2026-08-26T11:17:19.221516] [ALLOWED] SELECT COUNT(*) FROM orders
+[2026-08-26T11:17:19.226807] [ALLOWED] SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id
+[2026-08-26T11:17:19.233079] [ALLOWED] SELECT TOP 10 * FROM products ORDER BY price DESC
+[2026-08-26T11:17:19.238736] [ALLOWED] SELECT DISTINCT category FROM products
+[2026-08-26T11:17:19.244840] [ALLOWED] SELECT category, AVG(price) as avg_price, COUNT(*) as count FROM products GROUP BY category HAVING COUNT(*) > 5 ORDER BY avg_price DESC
+[2026-08-26T11:17:19.262170] [BLOCKED] DROP TABLE users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.263520] [BLOCKED] drop table users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.264520] [BLOCKED] Drop Table Users | Reason: Blocked: DROP statement detected in query
+[2026-08-26T11:17:19.265522] [BLOCKED] dRoP tAbLe users | Reason: Blocked: DROP statement detected in query

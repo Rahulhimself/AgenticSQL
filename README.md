@@ -1,66 +1,209 @@
 # AgenticSQL
 
-A conversational AI backend that allows you to chat with a local Microsoft SQL Server database using natural language. Built with LangChain and Google's Gemini 3.6 Flash model. 
+A conversational AI application that lets you chat with your Microsoft SQL Server database using natural language. Built with LangChain, Google Gemini, and FastAPI.
+
+> Ask questions in plain English → AgenticSQL writes the SQL → executes it → explains the results.
 
 ---
 
 ## What It Does
+
 AgenticSQL acts as a bridge between normal human questions and complex database queries. Instead of writing manual T-SQL, you can ask the agent questions about your data (like "Give me a summary of the row counts in all tables"), and it will automatically inspect the database schema, write the correct SQL query, execute it, and return the answer in plain English.
 
 ## Key Features
+
 * **Natural Language to SQL:** Uses a LangChain ReAct agent to autonomously query databases.
-* **Powered by Gemini:** Integrates Google's current `gemini-3.6-flash` model for fast and accurate reasoning.
+* **Powered by Gemini:** Integrates Google's `gemini-2.5-flash` model for fast and accurate reasoning.
 * **Local MS SQL Support:** Connects directly to local Microsoft SQL Server instances via PyODBC and SQLAlchemy.
-* **Secure by Design:** Keeps database passwords and API keys safely out of the codebase using environment variables.
+* **Secure by Design:** Keeps all credentials safely out of the codebase using environment variables.
+* **Conversation Memory:** Multi-turn context — ask follow-up questions and the agent remembers prior answers.
+* **SQL Safety Guardrails:** Blocks destructive queries (DROP, DELETE, ALTER, INSERT, UPDATE) with an audit log.
+* **Auto Visualization:** Generates bar, line, and pie charts from query results.
+* **Data Export:** Export results to CSV or JSON with a single command.
+* **Interactive REPL:** Rich terminal interface with syntax highlighting, history, and autocomplete.
+* **REST API & WebSocket:** FastAPI backend with `/chat`, `/schema`, `/history` endpoints for frontend integration.
+
+---
+
+## Architecture
+
+```
+AgenticSQL/
+├── agenticsql/              # Core package
+│   ├── config.py            # Environment-based configuration with validation
+│   ├── database.py          # Database connection with error handling
+│   ├── llm.py               # LLM initialization (Google Gemini)
+│   ├── agent.py             # SQL Agent with memory & guardrails
+│   ├── guardrails.py        # SQL validation & audit logging
+│   ├── visualization.py     # Chart generation & data export
+│   ├── cli.py               # Interactive REPL & CLI
+│   └── server.py            # FastAPI REST API & WebSocket
+├── tests/                   # Unit tests
+├── main.py                  # Entry point
+├── .env                     # Your credentials (not committed)
+├── .env.example             # Template for new contributors
+├── requirements.txt
+└── pyproject.toml
+```
 
 ---
 
 ## Prerequisites
-Before running this project, you will need:
-* Python 3.x installed
-* A local Microsoft SQL Server instance running with SQL Server Authentication enabled
+
+* **Python 3.10+**
+* A local **Microsoft SQL Server** instance with SQL Server Authentication enabled
 * **ODBC Driver 17 for SQL Server** installed on your machine
-* A Google AI Studio API key
+* A **Google AI Studio API key** ([get one here](https://aistudio.google.com/))
+
+---
 
 ## Installation & Setup
 
 **1. Clone the repository**
 ```bash
-git clone [https://github.com/Rahulhimself/AgenticSQL.git](https://github.com/Rahulhimself/AgenticSQL.git)
+git clone https://github.com/Rahulhimself/AgenticSQL.git
 cd AgenticSQL
 ```
 
-**2. Install dependencies**
-
-Install the required Python packages (it is recommended to use a Conda or virtual environment).
+**2. Create a virtual environment** (recommended)
 ```bash
-pip install langchain langchain-google-genai langchain-community sqlalchemy pyodbc python-dotenv
+python -m venv .venv
+.venv\Scripts\activate    # Windows
+# source .venv/bin/activate  # macOS/Linux
 ```
-**3. Configure your environment variables**
 
-Create a file named .env in the root directory of the project. Never upload this file to GitHub. Add your secure credentials to it:
+**3. Install dependencies**
 ```bash
-GOOGLE_API_KEY="your_google_api_key_here"
-DB_PASSWORD="your_database_password_here"
+pip install -r requirements.txt
 ```
-**4. Update database details**
 
-Open test_sql_agent.py and ensure the following variables match your local SQL Server setup:
+**4. Configure your environment variables**
+
+Copy the template and fill in your credentials:
 ```bash
-DB_USER (Your SQL Server login name)
-
-DB_SERVER (Usually 127.0.0.1 for local instances)
-
-DB_NAME (The database you want to query)
+copy .env.example .env    # Windows
+# cp .env.example .env    # macOS/Linux
 ```
-**Usage**
 
-To test the agent and run a sample query against your database, execute the main script:
+Edit `.env` with your values:
+```env
+GOOGLE_API_KEY="your_google_api_key"
+DB_USER="your_sql_server_username"
+DB_PASSWORD="your_database_password"
+DB_SERVER="127.0.0.1"
+DB_NAME="your_database_name"
+```
+
+> ⚠️ **Never commit `.env` to version control.** It's already in `.gitignore`.
+
+---
+
+## Usage
+
+### Interactive REPL (default)
+
 ```bash
-python test_sql_agent.py
+python main.py
 ```
-The terminal will print the agent's step-by-step thought process as it connects to the database(Keep Verbose=True), inspects the tables, and retrieves your answer.
 
+This launches a rich terminal interface:
 
+```
+🔷 agenticsql> Show me all tables and their row counts
 
+┌─ Agent Response ──────────────────────────┐
+│ Here are the tables in your database...   │
+└───────────────────────────────────────────┘
+┌─ Generated SQL ───────────────────────────┐
+│ SELECT t.name, p.rows FROM sys.tables t   │
+│ JOIN sys.partitions p ON ...              │
+└───────────────────────────────────────────┘
 
+🔷 agenticsql> How many of those have more than 100 rows?
+(Agent remembers the previous context)
+```
+
+### Slash Commands
+
+| Command | Description |
+|---|---|
+| `/help` | Show available commands |
+| `/schema` | Display database tables and columns |
+| `/explain` | Show the SQL from the last query |
+| `/export csv` | Export last results to CSV |
+| `/export json` | Export last results to JSON |
+| `/chart` | Generate a chart from last results |
+| `/history` | Show conversation history |
+| `/clear` | Clear conversation history |
+| `/quit` | Exit the application |
+
+### Single Query Mode
+
+```bash
+python main.py "How many customers are in the database?"
+```
+
+### API Server Mode
+
+```bash
+python main.py --server
+```
+
+Starts a FastAPI server at `http://localhost:8000` with auto-generated docs at `/docs`.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Health check |
+| `POST` | `/api/chat` | Send a question, get an answer |
+| `GET` | `/api/history` | Get conversation history |
+| `POST` | `/api/clear` | Clear conversation history |
+| `GET` | `/api/schema` | Get database schema |
+| `WS` | `/ws/chat` | WebSocket for streaming chat |
+
+### Verbose Mode
+
+Add `-v` to see the agent's step-by-step reasoning:
+```bash
+python main.py -v
+python main.py --server -v
+```
+
+---
+
+## Safety & Guardrails
+
+AgenticSQL is designed for **read-only** database access:
+
+* ✅ `SELECT` queries are allowed
+* ⛔ `DROP`, `DELETE`, `ALTER`, `INSERT`, `UPDATE`, `EXEC`, `CREATE`, `GRANT`, `REVOKE`, `TRUNCATE` are **blocked**
+* 📋 Every query attempt is logged to `logs/query_audit.log`
+
+For maximum safety, also configure your SQL Server user with `SELECT`-only permissions.
+
+---
+
+## Running Tests
+
+```bash
+python -m pytest tests/ -v
+```
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|---|---|
+| LLM | Google Gemini 2.5 Flash |
+| Agent Framework | LangChain (ReAct agent) |
+| Database | Microsoft SQL Server via SQLAlchemy + PyODBC |
+| API Server | FastAPI + Uvicorn |
+| Terminal UI | Rich + Prompt Toolkit |
+| Visualization | Matplotlib |
+| Testing | Pytest |
+
+---
+
+## License
+
+MIT
