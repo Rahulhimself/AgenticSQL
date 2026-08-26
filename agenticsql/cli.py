@@ -140,10 +140,10 @@ def run_repl(config: Config) -> None:
 
             elif cmd == "/export":
                 fmt = parts[1] if len(parts) > 1 else "csv"
-                _export_results(last_response, fmt)
+                _export_results(agent, last_response, fmt)
 
             elif cmd == "/chart":
-                _generate_chart(last_response)
+                _generate_chart(agent, last_response)
 
             elif cmd == "/history":
                 _show_history(agent)
@@ -220,25 +220,23 @@ def _show_last_sql(agent: AgenticSQLAgent) -> None:
         console.print("[yellow]No SQL query available yet. Ask a question first.[/yellow]")
 
 
-def _export_results(response: dict, fmt: str) -> None:
+def _export_results(agent: AgenticSQLAgent, response: dict, fmt: str) -> None:
     """Export the last results to a file."""
-    if not response:
+    # Prioritize direct DataFrame from agent
+    df = getattr(agent, "last_df", None)
+    if df is None and response.get("data"):
+        from .visualization import _to_dataframe
+        df = _to_dataframe(response["data"])
+
+    data_source = df if df is not None else response.get("output", "")
+    if not data_source:
         console.print("[yellow]No results to export. Ask a question first.[/yellow]")
         return
 
-    output = response.get("output", "")
-    parsed = parse_table_from_text(output)
-
-    if not parsed:
-        console.print("[yellow]Could not parse tabular data from the last response.[/yellow]")
-        return
-
-    headers, rows = parsed
-
     if fmt == "csv":
-        path = export_to_csv(headers, rows)
+        path = export_to_csv(data_source)
     elif fmt == "json":
-        path = export_to_json(headers, rows)
+        path = export_to_json(data_source)
     else:
         console.print(f"[yellow]Unsupported format: {fmt}. Use 'csv' or 'json'.[/yellow]")
         return
@@ -249,23 +247,21 @@ def _export_results(response: dict, fmt: str) -> None:
         console.print("[red]Export failed. Check logs for details.[/red]")
 
 
-def _generate_chart(response: dict) -> None:
+def _generate_chart(agent: AgenticSQLAgent, response: dict) -> None:
     """Generate a chart from the last response."""
-    if not response:
+    # Prioritize direct DataFrame from agent
+    df = getattr(agent, "last_df", None)
+    if df is None and response.get("data"):
+        from .visualization import _to_dataframe
+        df = _to_dataframe(response["data"])
+
+    data_source = df if df is not None else response.get("output", "")
+    if not data_source:
         console.print("[yellow]No results to chart. Ask a question first.[/yellow]")
         return
 
-    output = response.get("output", "")
-    parsed = parse_table_from_text(output)
-
-    if not parsed:
-        console.print("[yellow]Could not parse tabular data for charting.[/yellow]")
-        return
-
-    headers, rows = parsed
-
     with console.status("[bold cyan]Generating chart...[/bold cyan]", spinner="dots"):
-        path = save_chart(headers, rows)
+        path = save_chart(data_source)
 
     if path:
         console.print(f"[green]✓ Chart saved to: {path}[/green]")

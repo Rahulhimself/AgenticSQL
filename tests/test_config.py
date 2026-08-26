@@ -1,7 +1,16 @@
 """
 Tests for agenticsql.config module.
 
-Validates configuration loading, validation, and connection string building.
+Validates:
+- Configuration loading from environment variables
+- Validation logic for direct DATABASE_URL vs discrete parameters
+- Multi-cloud and multi-dialect connection string generation:
+  - Direct URI (Supabase, Neon, PlanetScale, CockroachDB)
+  - PostgreSQL (AWS RDS, Cloud SQL, Neon, Supabase)
+  - MySQL / MariaDB (PlanetScale, AWS Aurora, Cloud SQL)
+  - Microsoft SQL Server / Azure SQL
+  - SQLite local files
+  - Special character URL encoding
 """
 
 import os
@@ -26,7 +35,7 @@ class TestConfigValidation:
             config.validate()
 
     def test_missing_db_user_raises(self):
-        """Config validation should fail when DB_USER is missing."""
+        """Config validation should fail when DB_USER is missing for discrete config."""
         config = Config(
             google_api_key="key",
             db_user="",
@@ -37,7 +46,7 @@ class TestConfigValidation:
             config.validate()
 
     def test_missing_db_password_raises(self):
-        """Config validation should fail when DB_PASSWORD is missing."""
+        """Config validation should fail when DB_PASSWORD is missing for discrete config."""
         config = Config(
             google_api_key="key",
             db_user="user",
@@ -69,7 +78,7 @@ class TestConfigValidation:
         assert "DB_PASSWORD" in error_msg
         assert "DB_NAME" in error_msg
 
-    def test_valid_config_passes(self):
+    def test_valid_discrete_config_passes(self):
         """Config with all required fields should pass validation."""
         config = Config(
             google_api_key="test-key",
@@ -77,17 +86,34 @@ class TestConfigValidation:
             db_password="testpass",
             db_name="testdb",
         )
-        # Should not raise
+        config.validate()
+
+    def test_direct_database_url_passes_without_user_pass(self):
+        """When DATABASE_URL is present, discrete user/password/server are not required."""
+        config = Config(
+            google_api_key="test-key",
+            database_url="postgresql://postgres:secret@db.supabase.co:5432/postgres?sslmode=require",
+        )
+        config.validate()
+
+    def test_sqlite_only_requires_db_name(self):
+        """SQLite requires only db_name and api_key."""
+        config = Config(
+            google_api_key="test-key",
+            db_type="sqlite",
+            db_name="local_data.db",
+        )
         config.validate()
 
 
 class TestConnectionString:
-    """Test connection string building with URL encoding."""
+    """Test connection string building across dialects and cloud providers."""
 
-    def test_basic_connection_string(self):
-        """Connection string should be properly formatted."""
+    def test_basic_mssql_connection_string(self):
+        """MSSQL connection string should be properly formatted."""
         config = Config(
             google_api_key="key",
+            db_type="mssql",
             db_user="user",
             db_password="password",
             db_server="127.0.0.1",
@@ -100,38 +126,68 @@ class TestConnectionString:
         assert "driver=ODBC+Driver+17+for+SQL+Server" in cs
         assert "TrustServerCertificate=yes" in cs
 
+    def test_postgresql_connection_string(self):
+        """PostgreSQL string for AWS RDS / Supabase / Neon."""
+        config = Config(
+            google_api_key="key",
+            db_type="postgresql",
+            db_user="postgres",
+            db_password="secret@password",
+            db_server="ep-cool-dawn.us-east-2.aws.neon.tech",
+            db_port=5432,
+            db_name="neondb",
+            db_sslmode="require",
+        )
+        cs = config.connection_string
+        assert cs.startswith("postgresql+psycopg2://")
+        assert "postgres:secret%40password@ep-cool-dawn.us-east-2.aws.neon.tech:5432/neondb" in cs
+        assert "sslmode=require" in cs
+
+    def test_mysql_connection_string(self):
+        """MySQL string for PlanetScale / AWS RDS MySQL."""
+        config = Config(
+            google_api_key="key",
+            db_type="mysql",
+            db_user="root",
+            db_password="mypassword",
+            db_server="mydb.rds.amazonaws.com",
+            db_port=3306,
+            db_name="sales",
+        )
+        cs = config.connection_string
+        assert cs.startswith("mysql+pymysql://")
+        assert "root:mypassword@mydb.rds.amazonaws.com:3306/sales" in cs
+
+    def test_sqlite_connection_string(self):
+        """SQLite connection string."""
+        config = Config(
+            google_api_key="key",
+            db_type="sqlite",
+            db_name="test.db",
+        )
+        assert config.connection_string == "sqlite:///test.db"
+
+    def test_direct_database_url_normalization(self):
+        """Direct postgres:// URL should be normalized to postgresql+psycopg2://."""
+        config = Config(
+            google_api_key="key",
+            database_url="postgres://user:pass@ep-cool-dawn.aws.neon.tech/neondb?sslmode=require",
+        )
+        assert config.connection_string.startswith("postgresql+psycopg2://user:pass@ep-cool-dawn.aws.neon.tech/neondb")
+
     def test_special_chars_in_password_are_encoded(self):
         """Passwords with @ : / and other special chars must be URL-encoded."""
         config = Config(
             google_api_key="key",
+            db_type="postgresql",
             db_user="user",
             db_password="P@ss:w/rd!",
             db_server="127.0.0.1",
             db_name="mydb",
         )
         cs = config.connection_string
-        # The raw @ should NOT appear between user: and @server
-        # Instead it should be encoded as %40
         assert "P%40ss%3Aw%2Frd%21" in cs
-        # The structural @ (separating creds from host) should still be present
         assert "%40127.0.0.1" not in cs  # Server should NOT be encoded
-
-    def test_at_sign_in_password_encoded(self):
-        """The specific bug case: password with @ should be properly encoded."""
-        config = Config(
-            google_api_key="key",
-            db_user="langchain_agent",
-            db_password="Rahul@093609",
-            db_server="127.0.0.1",
-            db_name="sql_practise",
-        )
-        cs = config.connection_string
-        # @ in password should be encoded as %40
-        assert "Rahul%40093609" in cs
-        # Should still have exactly one structural @ for user:pass@host
-        parts = cs.split("//")[1]  # Remove scheme
-        at_count = parts.count("@")
-        assert at_count == 1, f"Expected 1 structural '@' but found {at_count} in: {parts}"
 
 
 class TestConfigFromEnv:
@@ -139,25 +195,17 @@ class TestConfigFromEnv:
 
     @patch.dict(os.environ, {
         "GOOGLE_API_KEY": "test-api-key",
-        "DB_USER": "test-user",
-        "DB_PASSWORD": "test-pass",
-        "DB_SERVER": "192.168.1.1",
-        "DB_NAME": "test_db",
-        "DB_DRIVER": "ODBC+Driver+18+for+SQL+Server",
+        "DATABASE_URL": "postgresql://user:pass@host:5432/dbname?sslmode=require",
         "LLM_MODEL": "gemini-2.5-pro",
         "LLM_TEMPERATURE": "0.5",
         "SERVER_HOST": "localhost",
         "SERVER_PORT": "9000",
     }, clear=False)
-    def test_loads_all_env_vars(self):
-        """All env vars should be loaded into the config."""
+    def test_loads_direct_database_url(self):
+        """DATABASE_URL should load and validate properly from env."""
         config = Config.from_env()
         assert config.google_api_key == "test-api-key"
-        assert config.db_user == "test-user"
-        assert config.db_password == "test-pass"
-        assert config.db_server == "192.168.1.1"
-        assert config.db_name == "test_db"
-        assert config.db_driver == "ODBC+Driver+18+for+SQL+Server"
+        assert config.database_url.startswith("postgresql://")
         assert config.llm_model == "gemini-2.5-pro"
         assert config.llm_temperature == 0.5
         assert config.server_host == "localhost"

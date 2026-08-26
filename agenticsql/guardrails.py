@@ -1,8 +1,9 @@
 """
 SQL query validation and safety guardrails.
 
-Blocks destructive or data-modifying SQL operations and maintains
-an audit log of all query execution attempts.
+Uses sqlglot Abstract Syntax Tree (AST) inspection to enforce read-only
+data access across multiple dialects (T-SQL, PostgreSQL, MySQL, SQLite, etc.)
+and maintains an audit log of all query execution attempts.
 """
 
 import re
@@ -11,10 +12,51 @@ from datetime import datetime
 from typing import Optional
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
+import sqlglot
+# pyrefly: ignore [missing-import]
+from sqlglot import exp, errors
+
 logger = logging.getLogger(__name__)
 
-# SQL patterns that indicate destructive or data-modifying operations
-BLOCKED_PATTERNS: list[tuple[str, str]] = [
+# Disallowed AST node classes anywhere in the parsed query tree
+FORBIDDEN_AST_NODES = (
+    exp.Drop,
+    exp.Delete,
+    exp.Insert,
+    exp.Update,
+    exp.Alter,
+    exp.Create,
+    exp.TruncateTable,
+    exp.Grant,
+    exp.Revoke,
+    exp.Command,
+    exp.Execute,
+    exp.Merge,
+    exp.Kill,
+)
+
+# Permitted top-level statement node types
+ALLOWED_TOP_LEVEL_NODES = (
+    exp.Selectable,  # Covers exp.Select and exp.Union
+    exp.Describe,
+    exp.Show,
+    exp.Pragma,
+)
+
+# Dangerous procedural commands or system functions blocked regardless of dialect
+FORBIDDEN_PROCEDURES: list[tuple[str, str]] = [
+    ("xp_cmdshell", "xp_cmdshell (dangerous system procedure)"),
+    ("sp_configure", "sp_configure (server configuration)"),
+    ("sp_executesql", "sp_executesql (dynamic SQL execution)"),
+    ("bulk insert", "BULK INSERT"),
+    ("openrowset", "OPENROWSET (external data access)"),
+    ("opendatasource", "OPENDATASOURCE (external data access)"),
+    ("shutdown", "SHUTDOWN command"),
+]
+
+# Legacy regex fallback patterns in case of unexpected dialect syntax anomalies
+FALLBACK_BLOCKED_PATTERNS: list[tuple[str, str]] = [
     (r"\bDROP\s+(TABLE|DATABASE|SCHEMA|INDEX|VIEW|PROCEDURE|FUNCTION|TRIGGER)\b", "DROP statement"),
     (r"\bTRUNCATE\s+TABLE\b", "TRUNCATE TABLE"),
     (r"\bDELETE\s+FROM\b", "DELETE FROM"),
@@ -25,13 +67,27 @@ BLOCKED_PATTERNS: list[tuple[str, str]] = [
     (r"\bCREATE\s+(TABLE|DATABASE|SCHEMA|INDEX|VIEW|PROCEDURE|FUNCTION|TRIGGER)\b", "CREATE statement"),
     (r"\bGRANT\s+", "GRANT statement"),
     (r"\bREVOKE\s+", "REVOKE statement"),
-    (r"\bSHUTDOWN\b", "SHUTDOWN command"),
-    (r"\bxp_cmdshell\b", "xp_cmdshell (dangerous system procedure)"),
-    (r"\bsp_configure\b", "sp_configure (server configuration)"),
-    (r"\bBULK\s+INSERT\b", "BULK INSERT"),
-    (r"\bOPENROWSET\b", "OPENROWSET (external data access)"),
-    (r"\bOPENDATASOURCE\b", "OPENDATASOURCE (external data access)"),
 ]
+
+
+def normalize_dialect(dialect: Optional[str] = None) -> str:
+    """Normalize a database dialect string into a sqlglot-compatible dialect identifier."""
+    if not dialect:
+        return "tsql"
+    d = dialect.lower().strip()
+    if any(k in d for k in ["postgres", "cockroach", "neon", "supabase"]):
+        return "postgres"
+    if any(k in d for k in ["mysql", "mariadb", "planetscale"]):
+        return "mysql"
+    if "sqlite" in d:
+        return "sqlite"
+    if "oracle" in d:
+        return "oracle"
+    if "snowflake" in d:
+        return "snowflake"
+    if "bigquery" in d:
+        return "bigquery"
+    return "tsql"
 
 
 class QueryAuditLog:
@@ -52,7 +108,7 @@ class QueryAuditLog:
             reason: Reason for blocking (if blocked).
         """
         timestamp = datetime.now().isoformat()
-        # Normalize whitespace for cleaner logs
+
         clean_sql = " ".join(sql.strip().split())
         entry = f"[{timestamp}] [{status}] {clean_sql}"
         if reason:
@@ -78,12 +134,13 @@ def get_audit_log() -> QueryAuditLog:
     return _audit_log
 
 
-def validate_sql(sql: str) -> tuple[bool, str]:
+def validate_sql(sql: str, dialect: Optional[str] = None) -> tuple[bool, str]:
     """
-    Validate a SQL query against safety rules.
+    Validate a SQL query against safety rules using AST inspection and dialect parsing.
 
     Args:
         sql: The SQL query to validate.
+        dialect: Optional SQL dialect ('mssql', 'postgresql', 'mysql', 'sqlite', etc.).
 
     Returns:
         A tuple of (is_safe, reason).
@@ -92,21 +149,77 @@ def validate_sql(sql: str) -> tuple[bool, str]:
     """
     sql_stripped = sql.strip()
 
-    # Allow empty queries
+    # Allow empty or whitespace-only queries
     if not sql_stripped:
         return True, ""
 
-    # Check against blocked patterns (case-insensitive)
-    for pattern, description in BLOCKED_PATTERNS:
-        if re.search(pattern, sql_stripped, re.IGNORECASE):
+    # 1. Check forbidden system procedures / administrative commands
+    sql_lower = sql_stripped.lower()
+    for kw, description in FORBIDDEN_PROCEDURES:
+        if re.search(rf"\b{re.escape(kw)}\b", sql_lower):
             reason = f"Blocked: {description} detected in query"
             get_audit_log().log_query(sql_stripped, "BLOCKED", reason)
             logger.warning(f"Query blocked — {reason}")
             return False, reason
 
-    # Log allowed queries
-    get_audit_log().log_query(sql_stripped, "ALLOWED")
-    return True, ""
+    # 2. Parse into Abstract Syntax Tree (AST) with sqlglot
+    glot_dialect = normalize_dialect(dialect)
+    try:
+        parsed = sqlglot.parse(sql_stripped, read=glot_dialect)
+        statements = [s for s in parsed if s is not None]
+
+        if not statements:
+            get_audit_log().log_query(sql_stripped, "ALLOWED")
+            return True, ""
+
+        for stmt in statements:
+            # Check top-level statement type
+            if not isinstance(stmt, ALLOWED_TOP_LEVEL_NODES):
+                stmt_name = type(stmt).__name__.upper()
+                reason = f"Blocked: Non-SELECT/read-only statement ({stmt_name}) is not permitted"
+                get_audit_log().log_query(sql_stripped, "BLOCKED", reason)
+                logger.warning(f"Query blocked — {reason}")
+                return False, reason
+
+            # Recursively walk the statement AST to check for forbidden operations
+            for node in stmt.walk():
+                if isinstance(node, FORBIDDEN_AST_NODES):
+                    node_name = type(node).__name__.upper()
+                    reason = f"Blocked: Forbidden {node_name} operation detected in query AST"
+                    get_audit_log().log_query(sql_stripped, "BLOCKED", reason)
+                    logger.warning(f"Query blocked — {reason}")
+                    return False, reason
+
+        # Query passed AST inspection
+        get_audit_log().log_query(sql_stripped, "ALLOWED")
+        return True, ""
+
+    except (errors.ParseError, errors.SqlglotError) as e:
+        logger.debug("sqlglot AST parse warning (%s), checking secondary regex fallback...", e)
+
+        # Fallback to secondary regex scan for unparseable dialect extensions
+        for pattern, description in FALLBACK_BLOCKED_PATTERNS:
+            if re.search(pattern, sql_stripped, re.IGNORECASE):
+                reason = f"Blocked: {description} detected in query"
+                get_audit_log().log_query(sql_stripped, "BLOCKED", reason)
+                logger.warning(f"Query blocked (fallback) — {reason}")
+                return False, reason
+
+        # If no destructive pattern is matched in fallback, allow
+        get_audit_log().log_query(sql_stripped, "ALLOWED")
+        return True, ""
+
+    except Exception as e:
+        logger.error("Unexpected error during SQL AST validation: %s", e)
+        # Defense in depth: fallback regex validation
+        for pattern, description in FALLBACK_BLOCKED_PATTERNS:
+            if re.search(pattern, sql_stripped, re.IGNORECASE):
+                reason = f"Blocked: {description} detected in query"
+                get_audit_log().log_query(sql_stripped, "BLOCKED", reason)
+                return False, reason
+
+        get_audit_log().log_query(sql_stripped, "ALLOWED")
+        return True, ""
 
 
 def format_blocked_message(reason: str) -> str:
@@ -118,3 +231,4 @@ def format_blocked_message(reason: str) -> str:
         "are not permitted.\n\n"
         "If you need to modify data, please use a database management tool directly."
     )
+

@@ -46,6 +46,13 @@ class ChatResponse(BaseModel):
     """Response body for the /api/chat endpoint."""
     output: str
     sql: list[str]
+    data: Optional[dict] = None
+
+
+class ChartRequest(BaseModel):
+    """Request body for the /api/chart endpoint."""
+    chart_type: str = "auto"
+    title: Optional[str] = None
 
 
 # --- App factory ---
@@ -100,12 +107,13 @@ def create_app(config: Config) -> FastAPI:
             "status": "healthy",
             "database": config.db_name,
             "server": config.db_server,
+            "dialect": getattr(_db, "dialect", config.db_type) if _db else config.db_type,
             "model": config.llm_model,
         }
 
     @app.post("/api/chat", response_model=ChatResponse)
     async def chat(request: ChatRequest):
-        """Send a natural language question and get an answer with generated SQL."""
+        """Send a natural language question and get an answer with generated SQL and structured tabular data."""
         if not _agent:
             raise HTTPException(status_code=503, detail="Agent not initialized.")
 
@@ -116,7 +124,29 @@ def create_app(config: Config) -> FastAPI:
         return ChatResponse(
             output=response["output"],
             sql=response.get("sql", []),
+            data=response.get("data"),
         )
+
+    @app.post("/api/chart")
+    async def generate_chart(request: ChartRequest = ChartRequest()):
+        """Generate a chart from the last executed SQL query results."""
+        if not _agent:
+            raise HTTPException(status_code=503, detail="Agent not initialized.")
+
+        if _agent.last_df is None or _agent.last_df.empty:
+            raise HTTPException(status_code=400, detail="No query result data available to chart. Execute a query first.")
+
+        from .visualization import save_chart_from_dataframe
+
+        chart_path = save_chart_from_dataframe(
+            _agent.last_df,
+            chart_type=request.chart_type,
+            title=request.title or "",
+        )
+        if not chart_path:
+            raise HTTPException(status_code=422, detail="Could not generate chart from the available data.")
+
+        return {"status": "success", "chart_path": chart_path}
 
     @app.get("/api/history")
     async def get_history():
