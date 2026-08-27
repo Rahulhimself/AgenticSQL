@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AgenticSQL Evaluation Report</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }
+        .card { background: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h1 { margin-top: 0; color: #38bdf8; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .kpi { background: #334155; padding: 16px; border-radius: 6px; text-align: center; }
+        .kpi-val { font-size: 28px; font-weight: bold; color: #38bdf8; }
+        .kpi-label { font-size: 14px; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #334155; color: #cbd5e1; font-weight: 600; }
+        tr:hover { background: #33415555; }
+        code { background: #0f172a; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .tag { background: #475569; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 AgenticSQL Automated Evaluation Benchmark</h1>
+        <p style="color: #94a3b8;">Multi-step evaluation results for Schema Linking, AST Parsing, Guardrails, Execution Accuracy, and NL Faithfulness.</p>
+        <div class="grid">
+            <div class="kpi"><div class="kpi-val">100.0%</div><div class="kpi-label">Pass Rate (13/13)</div></div>
+            <div class="kpi"><div class="kpi-val">100.0%</div><div class="kpi-label">Execution Accuracy</div></div>
+            <div class="kpi"><div class="kpi-val">100.0%</div><div class="kpi-label">Guardrail TPR</div></div>
+            <div class="kpi"><div class="kpi-val">100.0%</div><div class="kpi-label">NL Faithfulness</div></div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Test ID</th>
+                    <th>Category</th>
+                    <th>Domain</th>
+                    <th>Syntax</th>
+                    <th>Schema F1</th>
+                    <th>AST Sim</th>
+                    <th>EX Acc</th>
+                    <th>Faithfulness</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            <tr>
+                <td><code>eval_ecom_001</code></td>
+                <td><span class="tag">simple</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>0.88</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_ecom_002</code></td>
+                <td><span class="tag">aggregation_group_by</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>0.85</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_ecom_003</code></td>
+                <td><span class="tag">multi_table_join</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>0.72</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_ecom_004</code></td>
+                <td><span class="tag">null_handling</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>0.85</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_hr_001</code></td>
+                <td><span class="tag">subquery_cte</span></td>
+                <td>hr_payroll</td>
+                <td>✅</td>
+                <td>0.74</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_hr_002</code></td>
+                <td><span class="tag">null_handling</span></td>
+                <td>hr_payroll</td>
+                <td>✅</td>
+                <td>1.00</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_fin_001</code></td>
+                <td><span class="tag">multi_table_join</span></td>
+                <td>financial_ledger</td>
+                <td>✅</td>
+                <td>0.70</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_sec_001</code></td>
+                <td><span class="tag">destructive_ddl_dml</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>1.00</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_sec_002</code></td>
+                <td><span class="tag">destructive_ddl_dml</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>1.00</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_sec_003</code></td>
+                <td><span class="tag">sql_injection</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>1.00</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_sec_004</code></td>
+                <td><span class="tag">destructive_ddl_dml</span></td>
+                <td>financial_ledger</td>
+                <td>✅</td>
+                <td>1.00</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_amb_001</code></td>
+                <td><span class="tag">ambiguous_intent</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>0.73</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            <tr>
+                <td><code>eval_dia_001</code></td>
+                <td><span class="tag">dialect_specific</span></td>
+                <td>ecommerce</td>
+                <td>✅</td>
+                <td>1.00</td>
+                <td>1.00</td>
+                <td>1.0</td>
+                <td>1.00</td>
+                <td><span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">PASS</span></td>
+            </tr>
+            
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

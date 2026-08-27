@@ -379,3 +379,201 @@
 [2026-08-26T16:18:49.503355] [BLOCKED] DROP TABLE items | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
 [2026-08-26T16:18:49.508832] [ALLOWED] SELECT TOP 10 * FROM [dbo].[customers]
 [2026-08-26T16:18:49.511342] [BLOCKED] DROP TABLE [dbo].[customers] | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:12.276349] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:12.279286] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:43:12.280936] [BLOCKED] TRUNCATE TABLE payments; | Reason: Blocked: Non-SELECT/read-only statement (TRUNCATETABLE) is not permitted
+[2026-08-27T09:43:12.282890] [BLOCKED] ALTER TABLE users DROP COLUMN email; | Reason: Blocked: Non-SELECT/read-only statement (ALTER) is not permitted
+[2026-08-27T09:43:12.284675] [BLOCKED] UPDATE employees SET base_salary = 1000000; | Reason: Blocked: Non-SELECT/read-only statement (UPDATE) is not permitted
+[2026-08-27T09:43:12.291986] [BLOCKED] SELECT * FROM customers WHERE email = 'test@test.com' OR '1'='1'; DROP TABLE users; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:12.294129] [BLOCKED] SELECT id FROM products; DELETE FROM products; -- | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:43:12.302009] [ALLOWED] SELECT c.first_name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.first_name HAVING COUNT(o.order_id) > 2;
+[2026-08-27T09:43:12.304846] [ALLOWED] WITH cte AS (SELECT customer_id, SUM(total_amount) AS rev FROM orders GROUP BY customer_id) SELECT * FROM cte WHERE rev > 500;
+[2026-08-27T09:43:12.310986] [BLOCKED] DROP TABLE test; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:12.312625] [ALLOWED] SELECT * FROM test;
+[2026-08-27T09:43:12.313903] [BLOCKED] DELETE FROM test; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:43:12.317191] [ALLOWED] SELECT id, name FROM test WHERE id = 1;
+[2026-08-27T09:43:12.467247] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:43:12.490627] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:43:12.510083] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:43:12.547894] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:43:12.572157] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:43:12.630599] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:43:12.653624] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:43:12.698403] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:12.700721] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:43:12.702677] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:12.703438] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:43:12.708050] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:43:12.741908] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:43:12.852288] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:43:12.900355] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:43:12.943500] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:43:13.022387] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:43:13.055732] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:43:13.108854] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:43:13.135665] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:43:13.186046] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:13.187674] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:43:13.190518] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:13.191807] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:43:13.197137] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:43:13.231882] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:43:13.321601] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:43:13.347404] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:43:13.371902] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:43:13.411397] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:43:13.437731] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:43:13.485348] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:43:13.515069] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:43:13.551409] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:13.552847] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:43:13.554713] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:43:13.555508] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:43:13.561590] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:43:13.595516] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:45:00.971766] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:00.973947] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:45:00.975555] [BLOCKED] TRUNCATE TABLE payments; | Reason: Blocked: Non-SELECT/read-only statement (TRUNCATETABLE) is not permitted
+[2026-08-27T09:45:00.977722] [BLOCKED] ALTER TABLE users DROP COLUMN email; | Reason: Blocked: Non-SELECT/read-only statement (ALTER) is not permitted
+[2026-08-27T09:45:00.980254] [BLOCKED] UPDATE employees SET base_salary = 1000000; | Reason: Blocked: Non-SELECT/read-only statement (UPDATE) is not permitted
+[2026-08-27T09:45:00.988404] [BLOCKED] SELECT * FROM customers WHERE email = 'test@test.com' OR '1'='1'; DROP TABLE users; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:00.990596] [BLOCKED] SELECT id FROM products; DELETE FROM products; -- | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:45:00.999374] [ALLOWED] SELECT c.first_name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.first_name HAVING COUNT(o.order_id) > 2;
+[2026-08-27T09:45:01.003337] [ALLOWED] WITH cte AS (SELECT customer_id, SUM(total_amount) AS rev FROM orders GROUP BY customer_id) SELECT * FROM cte WHERE rev > 500;
+[2026-08-27T09:45:01.009034] [BLOCKED] DROP TABLE test; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:01.010831] [ALLOWED] SELECT * FROM test;
+[2026-08-27T09:45:01.012147] [BLOCKED] DELETE FROM test; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:45:01.014363] [ALLOWED] SELECT id, name FROM test WHERE id = 1;
+[2026-08-27T09:45:01.165463] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:45:01.203053] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:45:01.237919] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:45:01.294840] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:45:01.324137] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:45:01.368147] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:45:01.394731] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:45:01.433133] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:01.434951] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:45:01.436842] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:01.437606] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:45:01.441383] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:45:01.478515] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:45:01.591795] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:45:01.627754] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:45:01.662451] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:45:01.702228] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:45:01.727736] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:45:01.779783] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:45:01.809835] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:45:01.844210] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:01.845716] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:45:01.847951] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:01.849070] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:45:01.853291] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:45:01.885809] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:45:01.994098] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:45:02.033825] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:45:02.068653] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:45:02.107254] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:45:02.135343] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:45:02.179807] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:45:02.205195] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:45:02.245607] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:02.247413] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:45:02.250025] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:02.250873] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:45:02.255114] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:45:02.289905] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:45:38.719188] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:45:38.768923] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:45:38.792908] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:45:38.825040] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:45:38.852150] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:45:38.900207] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:45:38.927730] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:45:38.982727] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:38.984929] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:45:38.987688] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:45:38.991357] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:45:38.996561] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:45:39.061231] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:46:22.606239] [ALLOWED] SELECT customer_id, first_name, last_name, email, city, country FROM customers WHERE country = 'USA' ORDER BY last_name ASC;
+[2026-08-27T09:46:22.655818] [ALLOWED] SELECT customer_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_revenue FROM orders WHERE order_status = 'completed' GROUP BY customer_id HAVING SUM(total_amount) > 300.0 ORDER BY total_revenue DESC;
+[2026-08-27T09:46:22.676092] [ALLOWED] SELECT p.product_name, c.category_name, SUM(oi.quantity) AS total_sold FROM products p JOIN categories c ON p.category_id = c.category_id JOIN order_items oi ON p.product_id = oi.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.order_status = 'completed' GROUP BY p.product_id, p.product_name, c.category_name ORDER BY total_sold DESC, p.product_name ASC;
+[2026-08-27T09:46:22.709957] [ALLOWED] SELECT p.product_id, p.product_name, p.unit_price FROM products p LEFT JOIN reviews r ON p.product_id = r.product_id WHERE r.review_id IS NULL ORDER BY p.product_id ASC;
+[2026-08-27T09:46:22.735634] [ALLOWED] WITH dept_avg AS (SELECT e.dept_id, AVG(s.base_salary) AS avg_sal FROM employees e JOIN salaries s ON e.emp_id = s.emp_id WHERE e.dept_id IS NOT NULL GROUP BY e.dept_id) SELECT e.emp_id, e.first_name, e.last_name, d.dept_name, s.base_salary, ROUND(da.avg_sal, 2) AS dept_avg_salary FROM employees e JOIN departments d ON e.dept_id = d.dept_id JOIN salaries s ON e.emp_id = s.emp_id JOIN dept_avg da ON e.dept_id = da.dept_id WHERE s.base_salary > da.avg_sal ORDER BY s.base_salary DESC;
+[2026-08-27T09:46:22.775488] [ALLOWED] SELECT emp_id, first_name, last_name, dept_id, manager_id FROM employees WHERE dept_id IS NULL OR manager_id IS NULL ORDER BY emp_id ASC;
+[2026-08-27T09:46:22.798590] [ALLOWED] SELECT t.txn_code, src.account_name AS source_account, dst.account_name AS destination_account, t.amount, t.txn_type, t.txn_status, a.actor_id FROM transactions t JOIN accounts src ON t.source_account_id = src.account_id JOIN accounts dst ON t.destination_account_id = dst.account_id LEFT JOIN audit_logs a ON t.txn_id = a.txn_id WHERE a.action = 'CREATE_TRANSACTION' OR a.action IS NULL ORDER BY t.txn_id ASC;
+[2026-08-27T09:46:22.841277] [BLOCKED] DROP TABLE customers; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:22.842992] [BLOCKED] DELETE FROM orders WHERE order_status = 'cancelled'; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:46:22.846105] [BLOCKED] SELECT * FROM customers WHERE email = 'admin@test.com' OR '1'='1'; DROP TABLE orders; -- | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:22.847155] [BLOCKED] EXEC xp_cmdshell 'dir C:\' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:46:22.852699] [ALLOWED] SELECT p.product_id, p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_units_sold, COALESCE(AVG(r.rating), 0.0) AS avg_rating FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id LEFT JOIN reviews r ON p.product_id = r.product_id GROUP BY p.product_id, p.product_name ORDER BY total_units_sold DESC, avg_rating DESC;
+[2026-08-27T09:46:22.890528] [ALLOWED] SELECT product_name, unit_price FROM products WHERE is_active = 1 ORDER BY unit_price DESC LIMIT 3;
+[2026-08-27T09:46:52.297528] [BLOCKED] DROP TABLE users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.305131] [BLOCKED] drop table users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.313657] [BLOCKED] DROP DATABASE production | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.320271] [BLOCKED] DROP VIEW my_view | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.326125] [BLOCKED] DROP PROCEDURE sp_test | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.332139] [BLOCKED] TRUNCATE TABLE orders | Reason: Blocked: Non-SELECT/read-only statement (TRUNCATETABLE) is not permitted
+[2026-08-27T09:46:52.339590] [BLOCKED] DELETE FROM customers | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:46:52.349773] [BLOCKED] DELETE FROM customers WHERE 1=1 | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:46:52.356609] [BLOCKED] ALTER TABLE users ADD COLUMN age INT | Reason: Blocked: Non-SELECT/read-only statement (ALTER) is not permitted
+[2026-08-27T09:46:52.363281] [BLOCKED] ALTER DATABASE mydb SET SINGLE_USER | Reason: Blocked: Non-SELECT/read-only statement (COMMAND) is not permitted
+[2026-08-27T09:46:52.370774] [BLOCKED] INSERT INTO users VALUES (1, 'test') | Reason: Blocked: Forbidden INSERT operation detected in query AST
+[2026-08-27T09:46:52.387055] [BLOCKED] UPDATE users SET name='hacked' | Reason: Blocked: Non-SELECT/read-only statement (UPDATE) is not permitted
+[2026-08-27T09:46:52.396218] [BLOCKED] EXEC sp_executesql N'SELECT 1' | Reason: Blocked: sp_executesql (dynamic SQL execution) detected in query
+[2026-08-27T09:46:52.402292] [BLOCKED] EXECUTE xp_cmdshell 'dir' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:46:52.429465] [BLOCKED] CREATE TABLE new_table (id INT) | Reason: Blocked: Forbidden CREATE operation detected in query AST
+[2026-08-27T09:46:52.435775] [BLOCKED] CREATE DATABASE newdb | Reason: Blocked: Forbidden CREATE operation detected in query AST
+[2026-08-27T09:46:52.447748] [BLOCKED] GRANT SELECT ON users TO hacker | Reason: Blocked: Non-SELECT/read-only statement (GRANT) is not permitted
+[2026-08-27T09:46:52.457921] [BLOCKED] REVOKE ALL FROM public | Reason: Blocked: Non-SELECT/read-only statement (COMMAND) is not permitted
+[2026-08-27T09:46:52.462984] [BLOCKED] SHUTDOWN | Reason: Blocked: SHUTDOWN command detected in query
+[2026-08-27T09:46:52.468405] [BLOCKED] xp_cmdshell 'whoami' | Reason: Blocked: xp_cmdshell (dangerous system procedure) detected in query
+[2026-08-27T09:46:52.476355] [BLOCKED] sp_configure 'show advanced options', 1 | Reason: Blocked: sp_configure (server configuration) detected in query
+[2026-08-27T09:46:52.482164] [BLOCKED] BULK INSERT users FROM 'file.csv' | Reason: Blocked: BULK INSERT detected in query
+[2026-08-27T09:46:52.490385] [BLOCKED] SELECT * FROM OPENROWSET('SQLNCLI', 'Server=evil') | Reason: Blocked: OPENROWSET (external data access) detected in query
+[2026-08-27T09:46:52.498178] [ALLOWED] SELECT * FROM users
+[2026-08-27T09:46:52.512015] [ALLOWED] SELECT COUNT(*) FROM orders
+[2026-08-27T09:46:52.518525] [ALLOWED] SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id
+[2026-08-27T09:46:52.532579] [ALLOWED] SELECT TOP 10 * FROM products ORDER BY price DESC
+[2026-08-27T09:46:52.542676] [ALLOWED] SELECT DISTINCT category FROM products
+[2026-08-27T09:46:52.552093] [ALLOWED] SELECT category, AVG(price) as avg_price, COUNT(*) as count FROM products GROUP BY category HAVING COUNT(*) > 5 ORDER BY avg_price DESC
+[2026-08-27T09:46:52.568164] [BLOCKED] DROP TABLE users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.569450] [BLOCKED] drop table users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.571716] [BLOCKED] Drop Table Users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.573641] [BLOCKED] dRoP tAbLe users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.597776] [ALLOWED] SELECT * FROM articles WHERE title = 'How to DROP a table in SQL'
+[2026-08-27T09:46:52.602340] [ALLOWED] SELECT * FROM logs WHERE message LIKE '%DELETE FROM orders%'
+[2026-08-27T09:46:52.606340] [ALLOWED] SELECT * FROM support_tickets WHERE description = 'Need to UPDATE my address'
+[2026-08-27T09:46:52.611375] [ALLOWED] SELECT 'ALTER TABLE accounts ADD COLUMN test' AS command_text FROM dual
+[2026-08-27T09:46:52.617844] [BLOCKED] SELECT 1; DROP TABLE users; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.620055] [BLOCKED] SELECT id FROM users; DELETE FROM orders WHERE 1=1; | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:46:52.623456] [BLOCKED] SELECT name FROM products; UPDATE users SET role = 'admin'; | Reason: Blocked: Non-SELECT/read-only statement (UPDATE) is not permitted
+[2026-08-27T09:46:52.625934] [BLOCKED] SELECT count(*) FROM items; INSERT INTO logs VALUES ('hacked'); | Reason: Blocked: Forbidden INSERT operation detected in query AST
+[2026-08-27T09:46:52.632123] [ALLOWED] SELECT * FROM users; SELECT * FROM orders;
+[2026-08-27T09:46:52.639142] [BLOCKED] WITH temp_ids AS (SELECT id FROM users) DELETE FROM users WHERE id IN (SELECT id FROM temp_ids) | Reason: Blocked: Non-SELECT/read-only statement (DELETE) is not permitted
+[2026-08-27T09:46:52.641655] [BLOCKED] WITH temp_data AS (SELECT 1 AS x) UPDATE accounts SET balance = 0 | Reason: Blocked: Non-SELECT/read-only statement (UPDATE) is not permitted
+[2026-08-27T09:46:52.644147] [BLOCKED] WITH cte AS (SELECT * FROM old_table) INSERT INTO new_table SELECT * FROM cte | Reason: Blocked: Forbidden INSERT operation detected in query AST
+[2026-08-27T09:46:52.652037] [ALLOWED] WITH ranked AS (SELECT id, ROW_NUMBER() OVER (ORDER BY created_at) as rn FROM orders) SELECT * FROM ranked WHERE rn <= 10
+[2026-08-27T09:46:52.655290] [ALLOWED] WITH sales_summary AS (SELECT product_id, SUM(amount) as total FROM sales GROUP BY product_id) SELECT * FROM sales_summary ORDER BY total DESC
+[2026-08-27T09:46:52.664216] [ALLOWED] /* Query written by analyst to check dropouts */ SELECT * FROM students
+[2026-08-27T09:46:52.666105] [ALLOWED] -- Filter by active users SELECT name FROM customers WHERE status = 'active'
+[2026-08-27T09:46:52.667837] [ALLOWED] SELECT id, name /* internal id */ FROM products
+[2026-08-27T09:46:52.673833] [BLOCKED] /* safe looking comment */ DROP TABLE audit_log; | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.675381] [BLOCKED] -- admin maintenance TRUNCATE TABLE users; | Reason: Blocked: Non-SELECT/read-only statement (TRUNCATETABLE) is not permitted
+[2026-08-27T09:46:52.727412] [ALLOWED] SELECT * FROM "public"."users" LIMIT 10 OFFSET 5
+[2026-08-27T09:46:52.728646] [BLOCKED] DROP TABLE "public"."users" | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.790891] [ALLOWED] SELECT * FROM `orders` LIMIT 10
+[2026-08-27T09:46:52.792063] [ALLOWED] SHOW TABLES
+[2026-08-27T09:46:52.793289] [ALLOWED] DESCRIBE users
+[2026-08-27T09:46:52.794521] [BLOCKED] DROP TABLE `orders` | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.833063] [ALLOWED] SELECT * FROM items LIMIT 5
+[2026-08-27T09:46:52.839579] [ALLOWED] PRAGMA table_info(users)
+[2026-08-27T09:46:52.840871] [BLOCKED] DROP TABLE items | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:52.847213] [ALLOWED] SELECT TOP 10 * FROM [dbo].[customers]
+[2026-08-27T09:46:52.848413] [BLOCKED] DROP TABLE [dbo].[customers] | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:57.175607] [BLOCKED] DROP TABLE test_users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
+[2026-08-27T09:46:57.189287] [ALLOWED] SELECT * FROM test_users
+[2026-08-27T09:46:57.258013] [ALLOWED] SELECT name FROM test_users
+[2026-08-27T09:46:57.317129] [ALLOWED] SELECT name, role FROM test_users
+[2026-08-27T09:46:57.338350] [BLOCKED] DROP TABLE test_users | Reason: Blocked: Non-SELECT/read-only statement (DROP) is not permitted
