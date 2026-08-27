@@ -52,6 +52,11 @@ class Config:
     llm_model: str = "gemini-3.6-flash"
     llm_temperature: float = 0.0
 
+    # Self-Healing & Optimization (Phase 4b)
+    max_retries: int = 3
+    enable_self_healing: bool = True
+    enable_schema_pruning: bool = True
+
     # Server
     server_host: str = "0.0.0.0"
     server_port: int = 8000
@@ -76,8 +81,11 @@ class Config:
             db_driver=os.getenv("DB_DRIVER", "ODBC+Driver+17+for+SQL+Server"),
             db_sslmode=os.getenv("DB_SSLMODE", ""),
             db_extra_params=os.getenv("DB_EXTRA_PARAMS", ""),
-            llm_model=os.getenv("LLM_MODEL", "gemini-3.6-flash"),
+            llm_model=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
             llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0")),
+            max_retries=int(os.getenv("MAX_RETRIES", "3")),
+            enable_self_healing=os.getenv("ENABLE_SELF_HEALING", "true").lower() in ("true", "1", "yes"),
+            enable_schema_pruning=os.getenv("ENABLE_SCHEMA_PRUNING", "true").lower() in ("true", "1", "yes"),
             server_host=os.getenv("SERVER_HOST", "0.0.0.0"),
             server_port=int(os.getenv("SERVER_PORT", "8000")),
         )

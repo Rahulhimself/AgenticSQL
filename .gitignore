@@ -1,1 +1,33 @@
+# Environment and Secrets
 .env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Testing & Metrics
+.pytest_cache/
+.coverage
+htmlcov/
+.deepeval/
+
+# Local databases and logs
+*.db
+*.sqlite
+data/*.db
+data/*.sqlite
+logs/*.log
+!logs/.gitkeep
+
+# IDEs
+.vscode/
+.idea/

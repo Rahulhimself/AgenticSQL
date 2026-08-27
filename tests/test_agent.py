@@ -37,7 +37,7 @@ def mock_db():
 def mock_llm():
     """Create a mock LLM instance."""
     llm = MagicMock()
-    llm.model = "gemini-2.5-flash"
+    llm.model = "gemini-3.6-flash"
     llm.temperature = 0.0
     return llm
 

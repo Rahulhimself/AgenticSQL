@@ -143,6 +143,19 @@ This launches a rich terminal interface:
 python main.py "How many customers are in the database?"
 ```
 
+### Web Dashboard UI Mode (Phase 4a)
+
+```bash
+python main.py --ui
+```
+
+Launches an interactive dark-themed web dashboard with:
+* **Conversational AI Studio:** Multi-turn chat with real-time SQL syntax accordion.
+* **Auto-Visualization Studio:** Interactive Plotly charts (Bar, Line, Area, Pie, Scatter).
+* **1-Click Data Export:** Direct export of query results to CSV and JSON.
+* **Live Schema Explorer:** Interactive table inspector, column metadata, and data preview.
+* **Safety & Audit Monitor:** Real-time query audit logs and guardrail rejection telemetry.
+
 ### API Server Mode
 
 ```bash

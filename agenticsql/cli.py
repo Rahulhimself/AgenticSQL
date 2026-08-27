@@ -11,6 +11,7 @@ Provides:
 import sys
 import logging
 import argparse
+from typing import Optional
 
 # pyrefly: ignore [missing-import]
 
@@ -50,7 +51,8 @@ HELP_TEXT = """
 
   [green]/help[/green]          Show this help message
   [green]/schema[/green]        Display database schema (tables & columns)
-  [green]/explain[/green]       Show the SQL from the last query
+  [green]/explain[/green]       Show the SQL from the last query with breakdown
+  [green]/save[/green]          Bookmark last query as a golden exemplar (Phase 4c)
   [green]/export csv[/green]    Export last results to CSV
   [green]/export json[/green]   Export last results to JSON
   [green]/chart[/green]         Generate a chart from the last results
@@ -95,14 +97,22 @@ def run_repl(config: Config) -> None:
             llm = create_llm(config)
         console.print("[green]✓ LLM ready.[/green]\n")
 
-        agent = AgenticSQLAgent(llm=llm, db=db, verbose=False)
+        agent = AgenticSQLAgent(
+            llm=llm,
+            db=db,
+            verbose=False,
+            max_retries=config.max_retries,
+            enable_self_healing=config.enable_self_healing,
+            enable_schema_pruning=config.enable_schema_pruning,
+        )
 
     except Exception as e:
         console.print(f"\n[bold red]Startup Error:[/bold red] {e}")
         sys.exit(1)
 
-    # Track last response for /explain, /export, /chart
+    # Track last response for /explain, /export, /chart, /save
     last_response: dict = {}
+    last_input_text: str = ""
 
     # Prompt session with history and auto-suggestions
     session = PromptSession(
@@ -136,7 +146,10 @@ def run_repl(config: Config) -> None:
                 _show_schema(agent)
 
             elif cmd == "/explain":
-                _show_last_sql(agent)
+                _show_last_sql(agent, last_response)
+
+            elif cmd == "/save":
+                _save_exemplar(agent, last_input_text, last_response)
 
             elif cmd == "/export":
                 fmt = parts[1] if len(parts) > 1 else "csv"
@@ -151,6 +164,7 @@ def run_repl(config: Config) -> None:
             elif cmd == "/clear":
                 agent.clear_history()
                 last_response = {}
+                last_input_text = ""
                 console.print("[green]✓ Conversation history cleared.[/green]")
 
             else:
@@ -161,6 +175,7 @@ def run_repl(config: Config) -> None:
             continue
 
         # --- Regular query ---
+        last_input_text = user_input
         with console.status("[bold cyan]Thinking...[/bold cyan]", spinner="dots"):
             response = agent.chat(user_input)
 
@@ -176,6 +191,22 @@ def run_repl(config: Config) -> None:
                 padding=(1, 2),
             )
         )
+
+        # Display self-healing notification if query was repaired
+        if response.get("healed"):
+            console.print(
+                f"[bold cyan]🔄 Query was automatically self-healed in {response.get('attempts', 2)} attempts.[/bold cyan]"
+            )
+
+        # Display query performance profile (Phase 4c)
+        cost = response.get("cost", "LOW")
+        cost_color = "green" if cost == "LOW" else ("yellow" if cost == "MEDIUM" else "red")
+        console.print(f"[{cost_color}]⚡ Query Performance Rating: {cost}[/{cost_color}]")
+
+        tips = response.get("profiling_tips", [])
+        if tips:
+            for tip in tips:
+                console.print(f"  [dim]💡 Tip: {tip}[/dim]")
 
         # Show generated SQL if available
         if response.get("sql"):
@@ -206,8 +237,8 @@ def _show_schema(agent: AgenticSQLAgent) -> None:
     )
 
 
-def _show_last_sql(agent: AgenticSQLAgent) -> None:
-    """Show the SQL from the last query."""
+def _show_last_sql(agent: AgenticSQLAgent, last_response: Optional[dict] = None) -> None:
+    """Show the SQL from the last query along with educational breakdown."""
     if agent.last_sql:
         console.print(
             Panel(
@@ -216,8 +247,30 @@ def _show_last_sql(agent: AgenticSQLAgent) -> None:
                 border_style="yellow",
             )
         )
+        explanation = (last_response or {}).get("explanation")
+        if not explanation:
+            explanation = agent.explain_sql(agent.last_sql)
+        if explanation:
+            console.print(
+                Panel(
+                    Markdown(explanation),
+                    title="[bold cyan]💡 Query Explanation Breakdown[/bold cyan]",
+                    border_style="cyan",
+                )
+            )
     else:
         console.print("[yellow]No SQL query available yet. Ask a question first.[/yellow]")
+
+
+def _save_exemplar(agent: AgenticSQLAgent, user_question: str, last_response: dict) -> None:
+    """Save the last question and executed SQL as a golden few-shot exemplar (Phase 4c)."""
+    sql = agent.last_sql or ((last_response.get("sql") or [])[-1] if last_response.get("sql") else None)
+    if not sql or not user_question:
+        console.print("[yellow]No active query to save as an exemplar. Ask a question first.[/yellow]")
+        return
+
+    agent.add_golden_example(question=user_question, sql=sql)
+    console.print(f"[green]✓ Saved golden exemplar for: '{user_question}'[/green]")
 
 
 def _export_results(agent: AgenticSQLAgent, response: dict, fmt: str) -> None:
@@ -308,6 +361,11 @@ def parse_args() -> argparse.Namespace:
         help="Start the FastAPI server instead of the CLI.",
     )
     parser.add_argument(
+        "--ui",
+        action="store_true",
+        help="Start the Streamlit Web Dashboard UI.",
+    )
+    parser.add_argument(
         "--host",
         default=None,
         help="Server host (default: from .env or 0.0.0.0).",
@@ -329,6 +387,18 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Main entry point for AgenticSQL."""
     args = parse_args()
+
+    # --- UI mode ---
+    if args.ui:
+        import subprocess
+        from pathlib import Path
+        ui_script = Path(__file__).resolve().parent / "ui.py"
+        cmd = [sys.executable, "-m", "streamlit", "run", str(ui_script)]
+        if args.port:
+            cmd.extend(["--server.port", str(args.port)])
+        if args.host:
+            cmd.extend(["--server.address", str(args.host)])
+        sys.exit(subprocess.call(cmd))
 
     # Configure logging
     logging.basicConfig(

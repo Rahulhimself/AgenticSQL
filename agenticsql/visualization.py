@@ -47,6 +47,41 @@ def dataframe_to_dict(df: pd.DataFrame) -> dict:
     }
 
 
+def dataframe_to_csv(df: pd.DataFrame) -> str:
+    """Convert a pandas DataFrame to a CSV string."""
+    if df is None or df.empty:
+        return ""
+    return df.to_csv(index=False)
+
+
+def dataframe_to_json(df: pd.DataFrame) -> str:
+    """Convert a pandas DataFrame to a formatted JSON string (records format)."""
+    if df is None or df.empty:
+        return "[]"
+    data = dataframe_to_dict(df)
+    records = [dict(zip(data["columns"], row)) for row in data["rows"]]
+    return json.dumps(records, indent=2, ensure_ascii=False)
+
+
+def dataframe_to_markdown(df: pd.DataFrame) -> str:
+    """Convert a pandas DataFrame to a Markdown table string."""
+    if df is None or df.empty:
+        return ""
+    return df.to_markdown(index=False)
+
+
+def is_chartable(df: pd.DataFrame) -> bool:
+    """
+    Determine if a DataFrame has suitable dimensions and numeric data for charting.
+
+    Requires at least 2 columns with at least one numeric column.
+    """
+    if df is None or df.empty or len(df.columns) < 2 or len(df) == 0:
+        return False
+    numeric_cols = df.select_dtypes(include=["number"]).columns
+    return len(numeric_cols) > 0
+
+
 def parse_table_from_text(text: str) -> Optional[tuple[list[str], list[list[str]]]]:
     """
     Attempt to parse tabular data from agent output text (pipe-delimited tables).
