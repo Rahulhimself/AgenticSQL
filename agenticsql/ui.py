@@ -52,17 +52,24 @@ from agenticsql import guardrails
 
 logger = logging.getLogger(__name__)
 
-# --- Custom Styling & Theme ---
+# --- Custom Styling & Theme (Google Gemini UI Aesthetic) ---
 CUSTOM_CSS = """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    /* Global Typography & Base Theme */
-    html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+    /* Global Typography & Base Theme (Gemini Deep Black/Grey Aesthetic) */
+    html, body, [class*="css"], .stApp {
+        font-family: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        background-color: #131314 !important;
+        color: #e3e3e3 !important;
     }
+    
+    /* Code blocks */
     code, pre {
         font-family: 'JetBrains Mono', monospace !important;
+        background-color: #1e1f20 !important;
+        color: #e3e3e3 !important;
+        border: 1px solid #2d2f31 !important;
     }
 
     /* Main Container Padding */
@@ -72,31 +79,40 @@ CUSTOM_CSS = """
         max-width: 1400px;
     }
 
-    /* Header Styling */
+    /* Sidebar Gemini Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #1e1f20 !important;
+        border-right: 1px solid #2d2f31 !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #e3e3e3 !important;
+    }
+
+    /* Gemini Header Banner */
     .agent-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1rem 1.5rem;
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(13, 16, 24, 0.6) 100%);
-        border: 1px solid rgba(245, 158, 11, 0.25);
-        border-radius: 12px;
+        padding: 1.1rem 1.6rem;
+        background: linear-gradient(135deg, rgba(30, 31, 32, 0.95) 0%, rgba(19, 19, 20, 0.98) 100%);
+        border: 1px solid #2d2f31;
+        border-radius: 16px;
         margin-bottom: 1.5rem;
-        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
     .agent-title {
-        font-size: 1.6rem;
-        font-weight: 800;
-        background: linear-gradient(90deg, #f59e0b, #fbbf24, #38bdf8);
+        font-size: 1.65rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #a8c7fa 0%, #d3e3fd 50%, #ffffff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0;
         letter-spacing: -0.5px;
     }
     .agent-subtitle {
-        color: #94a3b8;
+        color: #c4c7c5;
         font-size: 0.85rem;
-        margin-top: 2px;
+        margin-top: 3px;
     }
 
     /* Status Pill */
@@ -104,34 +120,33 @@ CUSTOM_CSS = """
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 4px 12px;
-        background: rgba(16, 185, 129, 0.15);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 5px 14px;
+        background: rgba(30, 31, 32, 0.9);
+        border: 1px solid #3c4043;
         border-radius: 9999px;
-        color: #34d399;
+        color: #a8c7fa;
         font-size: 0.75rem;
         font-weight: 600;
-        text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     .status-dot {
         width: 8px;
         height: 8px;
-        background-color: #10b981;
+        background-color: #34a853;
         border-radius: 50%;
-        box-shadow: 0 0 8px #10b981;
+        box-shadow: 0 0 8px #34a853;
     }
 
-    /* Self-Healing Pill */
+    /* Healed Badge */
     .healed-badge {
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        padding: 2px 8px;
-        background: rgba(56, 189, 248, 0.15);
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        border-radius: 6px;
-        color: #38bdf8;
+        padding: 3px 10px;
+        background: rgba(168, 199, 250, 0.12);
+        border: 1px solid rgba(168, 199, 250, 0.3);
+        border-radius: 8px;
+        color: #a8c7fa;
         font-size: 0.75rem;
         font-weight: 600;
         margin-top: 4px;
@@ -139,49 +154,107 @@ CUSTOM_CSS = """
 
     /* Metric Cards */
     .metric-card {
-        background: #0d1018;
-        border: 1px solid #1e293b;
-        border-radius: 10px;
-        padding: 1rem;
+        background: #1e1f20 !important;
+        border: 1px solid #2d2f31 !important;
+        border-radius: 14px;
+        padding: 1.1rem;
         text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
     .metric-val {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
         font-weight: 700;
-        color: #f8fafc;
+        color: #ffffff !important;
     }
     .metric-lbl {
         font-size: 0.75rem;
-        color: #64748b;
+        color: #8e918f !important;
         text-transform: uppercase;
         margin-top: 4px;
         font-weight: 600;
+        letter-spacing: 0.5px;
     }
 
-    /* Login Card */
-    .login-container {
-        max-width: 480px;
-        margin: 3rem auto;
-        padding: 2rem;
-        background: #0d1018;
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        border-radius: 16px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    /* Gemini Chat Messages */
+    div[data-testid="stChatMessage"] {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0.75rem 0.5rem;
+    }
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-user"]) {
+        background-color: #1e1f20 !important;
+        border-radius: 18px !important;
+        padding: 0.85rem 1.2rem !important;
+        border: 1px solid #2d2f31 !important;
+        margin-bottom: 0.75rem;
     }
 
-    /* Prompt Chips */
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-        border-radius: 20px;
-        font-size: 0.8rem;
-        border: 1px solid rgba(245, 158, 11, 0.2);
-        background: rgba(15, 23, 42, 0.6);
-        color: #cbd5e1;
-        transition: all 0.2s ease;
+    /* Streamlit Chat Input (Gemini Rounded Floating Bar) */
+    div[data-testid="stChatInput"] {
+        background-color: #1e1f20 !important;
+        border: 1px solid #3c4043 !important;
+        border-radius: 28px !important;
+        color: #ffffff !important;
     }
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
-        border-color: #f59e0b;
-        color: #f59e0b;
-        transform: translateY(-1px);
+    div[data-testid="stChatInput"] textarea {
+        background-color: transparent !important;
+        color: #ffffff !important;
+    }
+
+    /* Gemini Pill Buttons */
+    div.stButton > button {
+        border-radius: 9999px !important;
+        background-color: #1e1f20 !important;
+        border: 1px solid #3c4043 !important;
+        color: #e3e3e3 !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+    }
+    div.stButton > button:hover {
+        background-color: #282a2c !important;
+        border-color: #a8c7fa !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 12px rgba(168, 199, 250, 0.2) !important;
+    }
+
+    /* Prompt Suggestion Chips */
+    div[data-testid="stHorizontalBlock"] button {
+        border-radius: 9999px !important;
+        font-size: 0.8rem !important;
+        border: 1px solid #2d2f31 !important;
+        background: #1e1f20 !important;
+        color: #c4c7c5 !important;
+    }
+    div[data-testid="stHorizontalBlock"] button:hover {
+        border-color: #a8c7fa !important;
+        color: #a8c7fa !important;
+        background: #282a2c !important;
+    }
+
+    /* Form Inputs */
+    input, select, textarea, div[data-baseweb="input"], div[data-baseweb="select"] {
+        background-color: #1e1f20 !important;
+        border-color: #3c4043 !important;
+        color: #ffffff !important;
+        border-radius: 12px !important;
+    }
+
+    /* Expanders & Tabs */
+    div[data-testid="stExpander"] {
+        background-color: #1e1f20 !important;
+        border: 1px solid #2d2f31 !important;
+        border-radius: 12px !important;
+    }
+    div[data-baseweb="tab-list"] {
+        background-color: #131314 !important;
+        border-bottom: 1px solid #2d2f31 !important;
+    }
+    button[data-baseweb="tab"] {
+        color: #8e918f !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #a8c7fa !important;
+        border-bottom-color: #a8c7fa !important;
     }
 </style>
 """
@@ -225,8 +298,8 @@ def render_login_screen() -> None:
     st.markdown(
         """
         <div style="text-align: center; margin-top: 2rem; margin-bottom: 1.5rem;">
-            <h1 style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(90deg, #f59e0b, #fbbf24, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">⚡ AgenticSQL Studio</h1>
-            <p style="color: #94a3b8;">Autonomous Database Intelligence • Multi-Tenant Security</p>
+            <h1 style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(90deg, #a8c7fa 0%, #d3e3fd 50%, #ffffff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">✨ AgenticSQL Studio</h1>
+            <p style="color: #c4c7c5;">Autonomous Database Intelligence • Multi-Tenant Security</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -354,13 +427,13 @@ def render_header(config: Optional[Config], is_connected: bool) -> None:
         else '<div class="status-pill" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #f87171;"><span class="status-dot" style="background-color: #ef4444; box-shadow: 0 0 8px #ef4444;"></span>DISCONNECTED</div>'
     )
 
-    role_badge = f'<span style="padding: 2px 8px; font-size: 0.75rem; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">👤 {user.username} ({user.role.upper()})</span>' if user else ""
+    role_badge = f'<span style="padding: 3px 10px; font-size: 0.75rem; border-radius: 9999px; background: rgba(168, 199, 250, 0.12); color: #a8c7fa; border: 1px solid rgba(168, 199, 250, 0.3);">👤 {user.username} ({user.role.upper()})</span>' if user else ""
 
     st.markdown(
         f"""
         <div class="agent-header">
             <div>
-                <h1 class="agent-title">⚡ AgenticSQL Studio</h1>
+                <h1 class="agent-title">✨ AgenticSQL Studio</h1>
                 <div class="agent-subtitle">Autonomous Database Intelligence • Powered by {model_str}</div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -547,9 +620,10 @@ def render_chart_studio(df: pd.DataFrame) -> None:
             )
 
         fig.update_layout(
-            paper_bgcolor="#0d1018",
-            plot_bgcolor="#07090e",
-            font_family="Plus Jakarta Sans",
+            paper_bgcolor="#1e1f20",
+            plot_bgcolor="#131314",
+            font_family="Google Sans, Inter, sans-serif",
+            font_color="#e3e3e3",
             margin=dict(l=20, r=20, t=40, b=20),
             hovermode="x unified",
         )
@@ -951,7 +1025,12 @@ def render_admin_tab() -> None:
                 template="plotly_dark",
                 color_discrete_sequence=["#38bdf8"],
             )
-            fig_user.update_layout(paper_bgcolor="#0d1018", plot_bgcolor="#07090e", font_family="Plus Jakarta Sans")
+            fig_user.update_layout(
+                paper_bgcolor="#1e1f20",
+                plot_bgcolor="#131314",
+                font_family="Google Sans, Inter, sans-serif",
+                font_color="#e3e3e3",
+            )
             st.plotly_chart(fig_user, use_container_width=True)
         else:
             st.info("No user query activity recorded yet.")
@@ -968,7 +1047,12 @@ def render_admin_tab() -> None:
                 template="plotly_dark",
                 color_discrete_sequence=["#f59e0b", "#38bdf8", "#34d399", "#a855f7"],
             )
-            fig_d.update_layout(paper_bgcolor="#0d1018", plot_bgcolor="#07090e", font_family="Plus Jakarta Sans")
+            fig_d.update_layout(
+                paper_bgcolor="#1e1f20",
+                plot_bgcolor="#131314",
+                font_family="Google Sans, Inter, sans-serif",
+                font_color="#e3e3e3",
+            )
             st.plotly_chart(fig_d, use_container_width=True)
         else:
             st.info("No custom databases registered yet.")
