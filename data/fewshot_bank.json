@@ -95,5 +95,19 @@
     "dialect": "mssql",
     "category": "general",
     "tables": []
+  },
+  {
+    "question": "Write an SQL query to:\nClassify company ratings into categories:'High Rated' \u2192 Rating >= 4\n--'Average Rated' \u2192 Rating between 3 and 3.99\n--'Low Rated' \u2192 Rating < 3\n--Create a column called RatingCategory.\n--Return the total number of companies in each category.",
+    "sql": "SELECT RatingCategory, COUNT(DISTINCT [Company_Name]) AS CompanyCount\nFROM (\n    SELECT CASE \n        WHEN [Rating] >= 4 THEN 'High Rated'\n        WHEN [Rating] >= 3 AND [Rating] < 4 THEN 'Average Rated'\n        ELSE 'Low Rated'\n    END AS RatingCategory,\n    [Company_Name]\n    FROM [DataAnalyst (1)]\n    WHERE [Company_Name] IS NOT NULL\n) AS sub\nGROUP BY RatingCategory\nORDER BY RatingCategory;",
+    "dialect": "mssql",
+    "category": "general",
+    "tables": []
+  },
+  {
+    "question": "You are analyzing salary trends for Data Analyst roles. Management wants to identify the highest paying companies within each industry.",
+    "sql": "WITH SalaryParsed AS (\n SELECT *,\n   TRY_CAST(LEFT(REPLACE(Salary_Estimate, '$', ''), CHARINDEX('K', REPLACE(Salary_Estimate, '$', ''))-1) AS INT) AS SalaryK\n FROM [DataAnalyst (1)]\n WHERE Salary_Estimate LIKE '%K%'\n), MaxCompanySalary AS (\n SELECT Industry, Company_Name, MAX(SalaryK) AS SalaryK\n FROM SalaryParsed\n GROUP BY Industry, Company_Name\n), Ranked AS (\n SELECT Industry, Company_Name, SalaryK,\n        ROW_NUMBER() OVER (PARTITION BY Industry ORDER BY SalaryK DESC) AS rn\n FROM MaxCompanySalary\n)\nSELECT Industry, Company_Name, SalaryK*1000 AS MaxSalary\nFROM Ranked\nWHERE rn = 1\nORDER BY Industry;",
+    "dialect": "mssql",
+    "category": "general",
+    "tables": []
   }
 ]

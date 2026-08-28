@@ -58,6 +58,13 @@ class TenantManager:
             is_default=is_default,
         )
 
+    def delete_connection(self, user_id: int, connection_id: int) -> bool:
+        """Delete a user connection and evict from cached agents and engines."""
+        cache_key = (user_id, connection_id)
+        self._db_cache.pop(cache_key, None)
+        self._agent_cache.pop(cache_key, None)
+        return self.auth_db.delete_user_connection(user_id, connection_id)
+
     def connect_tenant_db(
         self,
         user: User,

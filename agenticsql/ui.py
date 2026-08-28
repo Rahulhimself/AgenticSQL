@@ -377,8 +377,13 @@ def load_backend_for_tenant() -> tuple[Optional[AgenticSQLAgent], Optional[Any],
         config = st.session_state.config or Config.from_env()
         st.session_state.config = config
 
-        if not config.google_api_key:
+        provider = (config.llm_provider or "groq").lower().strip()
+        if provider == "groq" and not config.groq_api_key:
+            return None, None, "GROQ_API_KEY is missing from environment. Please add it to your .env file."
+        elif provider == "gemini" and not config.google_api_key:
             return None, None, "GOOGLE_API_KEY is missing from environment. Please add it to your .env file."
+        elif provider == "openai" and not config.openai_api_key:
+            return None, None, "OPENAI_API_KEY is missing from environment. Please add it to your .env file."
 
         if conn_id is None:
             db = connect(config)
@@ -419,15 +424,22 @@ def render_header(config: Optional[Config], is_connected: bool) -> None:
     """Render top header bar with branding and live status."""
     user = st.session_state.current_user
     dialect_str = (getattr(st.session_state.db, "dialect", config.db_type) if config else "SQL").upper()
-    model_str = config.llm_model if config else "Gemini 3.6 Flash"
+    provider_str = (config.llm_provider if config else "Groq").upper()
+    model_str = config.llm_model if config else "openai/gpt-oss-120b"
 
     status_html = (
         f'<div class="status-pill"><span class="status-dot"></span>{dialect_str} ONLINE</div>'
         if is_connected
-        else '<div class="status-pill" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #f87171;"><span class="status-dot" style="background-color: #ef4444; box-shadow: 0 0 8px #ef4444;"></span>DISCONNECTED</div>'
+        else '<div class="status-pill offline"><span class="status-dot"></span>OFFLINE</div>'
     )
 
-    role_badge = f'<span style="padding: 3px 10px; font-size: 0.75rem; border-radius: 9999px; background: rgba(168, 199, 250, 0.12); color: #a8c7fa; border: 1px solid rgba(168, 199, 250, 0.3);">👤 {user.username} ({user.role.upper()})</span>' if user else ""
+    role_badge = (
+        f'<span style="padding: 4px 12px; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; background: rgba(168, 199, 250, 0.12); color: #a8c7fa; border: 1px solid rgba(168, 199, 250, 0.3); letter-spacing: 0.03em;">👤 {user.username} ({user.role.upper()})</span>'
+        if user
+        else ""
+    )
+
+    provider_badge = f'<span style="padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; background: rgba(74, 222, 128, 0.12); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3);">{provider_str}</span>'
 
     st.markdown(
         f"""
@@ -436,7 +448,8 @@ def render_header(config: Optional[Config], is_connected: bool) -> None:
                 <h1 class="agent-title">✨ AgenticSQL Studio</h1>
                 <div class="agent-subtitle">Autonomous Database Intelligence • Powered by {model_str}</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                {provider_badge}
                 {role_badge}
                 {status_html}
             </div>
@@ -488,34 +501,130 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
             st.session_state.db = None
             st.rerun()
 
-        # Register New Database Connection
-        with st.expander("➕ Register Custom Database", expanded=False):
-            with st.form("new_db_conn_form"):
-                conn_name = st.text_input("Connection Name", placeholder="e.g. Sales Production DB")
-                conn_type = st.selectbox("Dialect", options=["mssql", "postgresql", "mysql", "sqlite"])
-                conn_uri = st.text_input("Connection URI", placeholder="e.g. sqlite:///data/my_app.db or postgresql://...")
-                conn_server = st.text_input("Server Host (Optional)", placeholder="127.0.0.1")
-                conn_dbname = st.text_input("Database Name (Optional)", placeholder="sales_db")
-                save_conn = st.form_submit_button("Register Connection")
+        # Quick Delete Active Custom Database
+        if selected_choice != "default" and user:
+            if st.button("🗑️ Delete Selected Database", use_container_width=True, help="Remove this custom database connection"):
+                st.session_state.tenant_mgr.delete_connection(user.id, selected_choice)
+                st.session_state.active_connection_id = None
+                st.session_state.agent = None
+                st.session_state.db = None
+                st.success("Database connection deleted.")
+                st.rerun()
 
-                if save_conn:
-                    if not conn_name or not conn_uri:
-                        st.error("Name and Connection URI are required.")
-                    else:
-                        try:
-                            new_c = st.session_state.tenant_mgr.register_connection(
-                                user_id=user.id,
-                                name=conn_name,
-                                db_type=conn_type,
-                                db_uri=conn_uri,
-                                db_server=conn_server,
-                                db_name=conn_dbname,
-                            )
-                            st.success(f"Registered connection '{new_c.name}'!")
-                            st.session_state.active_connection_id = new_c.id
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error registering connection: {e}")
+        # Register & Manage Custom Databases
+        with st.expander("⚙️ Manage & Register Databases", expanded=False):
+            tab_reg, tab_manage = st.tabs(["➕ Add New", "📋 Saved Connections"])
+
+            with tab_reg:
+                mode = st.radio("Configuration Mode", ["Quick Form (Recommended)", "Direct URI"], horizontal=True)
+
+                if mode == "Quick Form (Recommended)":
+                    with st.form("quick_db_conn_form"):
+                        conn_name = st.text_input("Connection Label", placeholder="e.g. Rahul June 2026 DB")
+                        conn_type = st.selectbox("Dialect", options=["mssql", "postgresql", "mysql", "sqlite"])
+                        conn_dbname = st.text_input("Database Name", placeholder="e.g. RAHUL_B_PRT_JUNE_2026 or my_db")
+
+                        if conn_type == "sqlite":
+                            conn_server = ""
+                            conn_user = ""
+                            conn_pass = ""
+                            conn_driver = ""
+                        else:
+                            conn_server = st.text_input("Server / Host", value=config.db_server if config else "127.0.0.1")
+                            conn_user = st.text_input("Username", value=config.db_user if config else "")
+                            conn_pass = st.text_input("Password", value=config.db_password if config else "", type="password")
+                            conn_driver = st.text_input("Driver (for MSSQL)", value=config.db_driver if config else "ODBC+Driver+17+for+SQL+Server") if conn_type == "mssql" else ""
+
+                        submit_btn = st.form_submit_button("Test & Save Connection")
+
+                        if submit_btn:
+                            if not conn_name or not conn_dbname:
+                                st.error("Please provide both Connection Label and Database Name.")
+                            else:
+                                import urllib.parse
+                                from sqlalchemy import create_engine
+
+                                enc_user = urllib.parse.quote_plus(conn_user)
+                                enc_pass = urllib.parse.quote_plus(conn_pass)
+                                enc_db = urllib.parse.quote_plus(conn_dbname)
+
+                                if conn_type == "sqlite":
+                                    uri = f"sqlite:///{conn_dbname}"
+                                elif conn_type == "postgresql":
+                                    uri = f"postgresql+psycopg2://{enc_user}:{enc_pass}@{conn_server}:5432/{enc_db}"
+                                elif conn_type == "mysql":
+                                    uri = f"mysql+pymysql://{enc_user}:{enc_pass}@{conn_server}:3306/{enc_db}"
+                                else:  # mssql
+                                    uri = f"mssql+pyodbc://{enc_user}:{enc_pass}@{conn_server}/{enc_db}?driver={conn_driver}&TrustServerCertificate=yes"
+
+                                try:
+                                    # Pre-flight connection test
+                                    test_engine = create_engine(uri)
+                                    with test_engine.connect() as test_conn:
+                                        pass
+
+                                    new_c = st.session_state.tenant_mgr.register_connection(
+                                        user_id=user.id,
+                                        name=conn_name,
+                                        db_type=conn_type,
+                                        db_uri=uri,
+                                        db_server=conn_server,
+                                        db_name=conn_dbname,
+                                    )
+                                    st.success(f"Connected and registered '{new_c.name}' successfully!")
+                                    st.session_state.active_connection_id = new_c.id
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Connection test failed: {e}")
+
+                else:  # Direct URI
+                    with st.form("uri_db_conn_form"):
+                        conn_name = st.text_input("Connection Name", placeholder="e.g. Supabase Production")
+                        conn_type = st.selectbox("Dialect", options=["mssql", "postgresql", "mysql", "sqlite"])
+                        conn_uri = st.text_input("Connection URI", placeholder="e.g. sqlite:///data/my_app.db or postgresql://...")
+                        submit_uri = st.form_submit_button("Test & Save URI")
+
+                        if submit_uri:
+                            if not conn_name or not conn_uri:
+                                st.error("Name and Connection URI are required.")
+                            else:
+                                from sqlalchemy import create_engine
+                                try:
+                                    test_engine = create_engine(conn_uri)
+                                    with test_engine.connect() as test_conn:
+                                        pass
+
+                                    new_c = st.session_state.tenant_mgr.register_connection(
+                                        user_id=user.id,
+                                        name=conn_name,
+                                        db_type=conn_type,
+                                        db_uri=conn_uri,
+                                    )
+                                    st.success(f"Registered connection '{new_c.name}'!")
+                                    st.session_state.active_connection_id = new_c.id
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Connection failed: {e}")
+
+            with tab_manage:
+                if not user_conns:
+                    st.info("No custom databases registered yet.")
+                else:
+                    for c in user_conns:
+                        col_info, col_del = st.columns([3, 1])
+                        with col_info:
+                            st.markdown(f"**{c.name}** (`{c.db_type.upper()}`)")
+                            if c.db_name:
+                                st.caption(f"DB: `{c.db_name}`")
+                        with col_del:
+                            if st.button("🗑️", key=f"del_conn_{c.id}", help=f"Delete {c.name}"):
+                                st.session_state.tenant_mgr.delete_connection(user.id, c.id)
+                                if st.session_state.active_connection_id == c.id:
+                                    st.session_state.active_connection_id = None
+                                    st.session_state.agent = None
+                                    st.session_state.db = None
+                                st.success(f"Deleted {c.name}")
+                                st.rerun()
 
         st.markdown("---")
         st.markdown("### ⚙️ Session Controls")
@@ -528,11 +637,13 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                 st.session_state.agent.chat_history.clear()
             st.rerun()
 
-        if st.button("🔄 Refresh Schema Cache", use_container_width=True):
-            if st.session_state.db:
-                st.session_state.schema_info = get_schema_info(st.session_state.db)
-                st.success("Schema cache refreshed!")
-                st.rerun()
+        if st.button("🔄 Refresh Schema & Config", use_container_width=True):
+            st.session_state.config = Config.from_env()
+            st.session_state.agent = None
+            st.session_state.db = None
+            st.session_state.schema_info = None
+            st.success("Config & database schema reloaded!")
+            st.rerun()
 
         st.markdown("---")
         st.caption("AgenticSQL v1.0.0 • Read-Only Safe")

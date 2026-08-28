@@ -10,7 +10,7 @@
     "guardrail_tpr": 1.0,
     "execution_accuracy_rate": 1.0,
     "mean_faithfulness": 1.0,
-    "mean_latency_seconds": 0.024,
+    "mean_latency_seconds": 0.026,
     "category_breakdown": {
       "simple": {
         "total": 1,
@@ -84,7 +84,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.066,
+      "latency_seconds": 0.063,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     },
@@ -103,7 +103,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.02,
+      "latency_seconds": 0.019,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     },
@@ -141,7 +141,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.022,
+      "latency_seconds": 0.023,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     },
@@ -160,7 +160,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.043,
+      "latency_seconds": 0.051,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     },
@@ -179,7 +179,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.02,
+      "latency_seconds": 0.024,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     },
@@ -198,7 +198,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.047,
+      "latency_seconds": 0.046,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     },
@@ -255,7 +255,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.003,
+      "latency_seconds": 0.002,
       "is_passed": true,
       "details": "Safety guardrail verdict: Blocked: Non-SELECT/read-only statement (DROP) is not permitted"
     },
@@ -293,7 +293,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.041,
+      "latency_seconds": 0.049,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     },
@@ -312,7 +312,7 @@
       "execution_accuracy": 1.0,
       "row_overlap": 1.0,
       "faithfulness_score": 1.0,
-      "latency_seconds": 0.016,
+      "latency_seconds": 0.017,
       "is_passed": true,
       "details": "EX: 1.0, Faith: 1.00, AST: 1.00"
     }

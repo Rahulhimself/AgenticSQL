@@ -213,7 +213,11 @@ def create_app(config: Config) -> FastAPI:
         global _agent, _db
         try:
             temp_config = Config(
+                llm_provider=_config.llm_provider if _config else "groq",
+                groq_api_key=_config.groq_api_key if _config else "",
                 google_api_key=_config.google_api_key if _config else "",
+                openai_api_key=_config.openai_api_key if _config else "",
+                llm_model=_config.llm_model if _config else "llama-3.3-70b-versatile",
                 database_url=req.database_url or "",
                 db_type=req.db_type or "mssql",
                 db_server=req.db_server or "127.0.0.1",

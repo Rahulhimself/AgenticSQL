@@ -15,11 +15,12 @@ from agenticsql.auth import AuthDatabase
 @pytest.fixture
 def test_config():
     return Config(
-        google_api_key="test_key",
+        llm_provider="groq",
+        groq_api_key="gsk_test_key",
         db_name="test_db",
         db_server="127.0.0.1",
         db_type="sqlite",
-        llm_model="gemini-3.6-flash",
+        llm_model="llama-3.3-70b-versatile",
     )
 
 

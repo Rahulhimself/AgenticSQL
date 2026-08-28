@@ -33,14 +33,24 @@ jobs:
           pip install pytest deepeval langfuse tabulate
 
       - name: Run Core Agent Unit Tests
+        env:
+          LLM_PROVIDER: mock
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
-          pytest tests/test_agent.py tests/test_guardrails.py tests/test_config.py tests/test_visualization.py -v
+          pytest tests/test_agent.py tests/test_guardrails.py tests/test_config.py tests/test_visualization.py tests/test_auth_tenancy.py tests/test_fewshot_profiler.py -v
 
       - name: Run Evaluation Harness Tests
+        env:
+          LLM_PROVIDER: mock
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           pytest tests/eval/ -v
 
       - name: Run Full Evaluation Benchmark & Quality Gate Check
+        env:
+          LLM_PROVIDER: ${{ secrets.GROQ_API_KEY != '' && 'groq' || 'mock' }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           python -m agenticsql.eval.runner \
             --dataset agenticsql/eval/data/golden_sql_eval.json \

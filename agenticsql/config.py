@@ -31,8 +31,11 @@ DEFAULT_PORTS: dict[str, int] = {
 class Config:
     """Application configuration loaded from environment variables."""
 
-    # API
+    # API & LLM Provider Settings
+    llm_provider: str = "groq"  # 'groq', 'gemini', 'openai', 'mock'
+    groq_api_key: str = ""
     google_api_key: str = ""
+    openai_api_key: str = ""
 
     # Direct database connection URI (if provided, takes precedence over discrete fields)
     database_url: str = ""
@@ -49,7 +52,7 @@ class Config:
     db_extra_params: str = ""
 
     # LLM
-    llm_model: str = "gemini-3.6-flash"
+    llm_model: str = "llama-3.3-70b-versatile"
     llm_temperature: float = 0.0
 
     # Self-Healing & Optimization (Phase 4b)
@@ -69,8 +72,35 @@ class Config:
         port_str = os.getenv("DB_PORT", "").strip()
         db_port = int(port_str) if port_str.isdigit() else None
 
+        raw_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+        groq_key = os.getenv("GROQ_API_KEY", "").strip()
+        google_key = os.getenv("GOOGLE_API_KEY", "").strip()
+        openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+        if raw_provider in ("groq", "gemini", "openai", "mock", "fake"):
+            if raw_provider == "groq" and not groq_key and google_key:
+                provider = "gemini"
+            else:
+                provider = raw_provider
+        elif groq_key:
+            provider = "groq"
+        elif google_key:
+            provider = "gemini"
+        elif openai_key:
+            provider = "openai"
+        else:
+            provider = "groq"
+
+        default_model = "llama-3.3-70b-versatile" if provider == "groq" else (
+            "gemini-2.5-flash" if provider == "gemini" else "gpt-4o-mini"
+        )
+        llm_model = os.getenv("LLM_MODEL") or default_model
+
         config = cls(
-            google_api_key=os.getenv("GOOGLE_API_KEY", ""),
+            llm_provider=provider,
+            groq_api_key=groq_key,
+            google_api_key=google_key,
+            openai_api_key=openai_key,
             database_url=os.getenv("DATABASE_URL") or os.getenv("DB_URI", ""),
             db_type=os.getenv("DB_TYPE") or os.getenv("DB_DIALECT", "mssql"),
             db_user=os.getenv("DB_USER", ""),
@@ -81,7 +111,7 @@ class Config:
             db_driver=os.getenv("DB_DRIVER", "ODBC+Driver+17+for+SQL+Server"),
             db_sslmode=os.getenv("DB_SSLMODE", ""),
             db_extra_params=os.getenv("DB_EXTRA_PARAMS", ""),
-            llm_model=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
+            llm_model=llm_model,
             llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0")),
             max_retries=int(os.getenv("MAX_RETRIES", "3")),
             enable_self_healing=os.getenv("ENABLE_SELF_HEALING", "true").lower() in ("true", "1", "yes"),
@@ -97,8 +127,20 @@ class Config:
         """Validate that all required configuration values are present."""
         errors: list[str] = []
 
-        if not self.google_api_key:
-            errors.append("GOOGLE_API_KEY is missing from your .env file")
+        # Validate LLM API key based on selected provider
+        provider = self.llm_provider.lower().strip()
+        if provider == "groq":
+            if not self.groq_api_key:
+                errors.append("GROQ_API_KEY is missing from your .env file")
+        elif provider == "gemini":
+            if not self.google_api_key:
+                errors.append("GOOGLE_API_KEY is missing from your .env file")
+        elif provider == "openai":
+            if not self.openai_api_key:
+                errors.append("OPENAI_API_KEY is missing from your .env file")
+        elif provider not in ("mock", "fake", "none"):
+            if not (self.groq_api_key or self.google_api_key or self.openai_api_key):
+                errors.append(f"API key missing for LLM provider '{self.llm_provider}'")
 
         # If direct DATABASE_URL is provided, discrete connection fields are optional
         if self.database_url:

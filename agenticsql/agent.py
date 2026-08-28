@@ -14,10 +14,8 @@ import pandas as pd
 
 # pyrefly: ignore [missing-import]
 from langchain_community.utilities import SQLDatabase
-# pyrefly: ignore [missing-import]
 from langchain_community.agent_toolkits import create_sql_agent
-# pyrefly: ignore [missing-import]
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from . import guardrails
@@ -106,7 +104,7 @@ class AgenticSQLAgent:
 
     def __init__(
         self,
-        llm: ChatGoogleGenerativeAI,
+        llm: BaseChatModel,
         db: SQLDatabase,
         verbose: bool = False,
         memory_window: int = 10,

@@ -369,6 +369,17 @@ class AuthDatabase:
                 for row in cursor.fetchall()
             ]
 
+    def delete_user_connection(self, user_id: int, connection_id: int) -> bool:
+        """Delete a database connection registered by a user."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM user_connections WHERE id = ? AND user_id = ?",
+                (connection_id, user_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
     # --- Per-User Query History ---
 
     def log_query(

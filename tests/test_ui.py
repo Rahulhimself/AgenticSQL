@@ -39,19 +39,20 @@ class TestUIState:
 class TestUIBackendLoading:
     """Test backend loading with mock and missing credentials."""
 
-    def test_load_backend_missing_google_api_key(self):
-        """Should return error if GOOGLE_API_KEY is empty."""
+    def test_load_backend_missing_groq_api_key(self):
+        """Should return error if GROQ_API_KEY is empty."""
         # Reset state
         st.session_state.agent = None
         st.session_state.db = None
         st.session_state.config = MagicMock()
-        st.session_state.config.google_api_key = ""
+        st.session_state.config.llm_provider = "groq"
+        st.session_state.config.groq_api_key = ""
 
         agent, db, err = load_backend()
         assert agent is None
         assert db is None
         assert err is not None
-        assert "GOOGLE_API_KEY is missing" in err
+        assert "GROQ_API_KEY is missing" in err
 
     @patch("agenticsql.ui.connect")
     @patch("agenticsql.ui.create_llm")
@@ -62,7 +63,8 @@ class TestUIBackendLoading:
         st.session_state.agent = None
         st.session_state.db = None
         st.session_state.config = MagicMock()
-        st.session_state.config.google_api_key = "dummy_key"
+        st.session_state.config.llm_provider = "groq"
+        st.session_state.config.groq_api_key = "gsk_dummy_key"
 
         mock_db_instance = MagicMock()
         mock_connect.return_value = mock_db_instance
