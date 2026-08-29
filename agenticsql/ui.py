@@ -37,7 +37,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from agenticsql.config import Config
-from agenticsql.database import connect, get_schema_info
+from agenticsql.database import connect, get_schema_info, normalize_connection_uri
 from agenticsql.llm import create_llm
 from agenticsql.agent import AgenticSQLAgent
 from agenticsql.auth import AuthDatabase, User, UserConnection
@@ -585,7 +585,6 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                             else:
                                 import urllib.parse
                                 from sqlalchemy import create_engine
-                                from agenticsql.database import normalize_connection_uri
 
                                 enc_user = urllib.parse.quote_plus(conn_user)
                                 enc_pass = urllib.parse.quote_plus(conn_pass)
@@ -641,7 +640,6 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                                 st.error("Name and Connection URI are required.")
                             else:
                                 from sqlalchemy import create_engine
-                                from agenticsql.database import normalize_connection_uri
                                 norm_uri = normalize_connection_uri(conn_uri)
                                 try:
                                     test_engine = create_engine(norm_uri)

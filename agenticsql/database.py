@@ -13,6 +13,13 @@ from langchain_community.utilities import SQLDatabase
 
 from .config import Config
 
+__all__ = [
+    "connect",
+    "connect_from_uri",
+    "normalize_connection_uri",
+    "get_schema_info",
+]
+
 logger = logging.getLogger(__name__)
 
 
