@@ -31,3 +31,6 @@ logs/*.log
 # IDEs
 .vscode/
 .idea/
+
+# Local SSMS / SQL Server data artifacts
+RAHUL_B_PRT_*
