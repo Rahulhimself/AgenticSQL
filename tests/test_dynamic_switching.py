@@ -10,9 +10,11 @@ Verifies:
 6. URI scheme normalization for cloud & local database drivers.
 """
 
+import os
 import sqlite3
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 from sqlalchemy import create_engine, text
 
 from agenticsql.auth import AuthDatabase, User
@@ -31,6 +33,14 @@ def create_sqlite_database_with_schema(db_path: Path, table_defs: dict[str, list
     conn.close()
 
 
+@patch.dict(os.environ, {
+    "DB_TYPE": "sqlite",
+    "DB_NAME": "data/test_agenticsql.db",
+    "DB_USER": "test_user",
+    "DB_PASSWORD": "test_password",
+    "LLM_PROVIDER": "mock",
+    "GROQ_API_KEY": "gsk_test_key",
+})
 class TestDynamicDatabaseSwitching:
     """Verify multi-tenant dynamic database connection switching and schema inspection."""
 

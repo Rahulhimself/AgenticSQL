@@ -45,8 +45,13 @@ jobs:
       - name: Run Core Agent Unit Tests
         env:
           LLM_PROVIDER: mock
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'gsk_mock_ci_key' }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY || '' }}
+          DB_TYPE: sqlite
+          DB_NAME: data/test_ci.db
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_SERVER: 127.0.0.1
         run: |
           pytest tests/test_agent.py tests/test_guardrails.py tests/test_config.py tests/test_visualization.py tests/test_auth_tenancy.py tests/test_fewshot_profiler.py tests/test_dynamic_switching.py tests/test_ui.py -v
 

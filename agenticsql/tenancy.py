@@ -92,10 +92,9 @@ class TenantManager:
         if cache_key in self._db_cache:
             return self._db_cache[cache_key]
 
-        cfg = config or Config.from_env()
-
         if connection_id is None:
             # Use system default database
+            cfg = config or Config.from_env()
             db = default_connect(cfg)
             self._db_cache[cache_key] = db
             return db
@@ -130,8 +129,21 @@ class TenantManager:
         if cache_key in self._agent_cache:
             return self._agent_cache[cache_key]
 
-        cfg = config or Config.from_env()
-        db = self.connect_tenant_db(user, connection_id=connection_id, config=cfg)
+        db = self.connect_tenant_db(user, connection_id=connection_id, config=config)
+
+        cfg = config
+        if cfg is None:
+            try:
+                cfg = Config.from_env()
+            except Exception:
+                cfg = Config(
+                    llm_provider=os.getenv("LLM_PROVIDER", "mock"),
+                    groq_api_key=os.getenv("GROQ_API_KEY", "gsk_test"),
+                    google_api_key=os.getenv("GOOGLE_API_KEY", ""),
+                    database_url="sqlite:///data/agenticsql_meta.db",
+                    db_type="sqlite",
+                    db_name="data/agenticsql_meta.db",
+                )
         llm = create_llm(cfg)
 
         agent = AgenticSQLAgent(
