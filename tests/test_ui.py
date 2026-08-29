@@ -54,14 +54,16 @@ class TestUIBackendLoading:
         assert err is not None
         assert "GROQ_API_KEY is missing" in err
 
-    @patch("agenticsql.ui.connect")
-    @patch("agenticsql.ui.create_llm")
-    @patch("agenticsql.ui.AgenticSQLAgent")
+    @patch("agenticsql.tenancy.default_connect")
+    @patch("agenticsql.tenancy.create_llm")
+    @patch("agenticsql.tenancy.AgenticSQLAgent")
     @patch("agenticsql.ui.get_schema_info")
     def test_load_backend_success(self, mock_schema, mock_agent_cls, mock_llm, mock_connect):
         """Should connect and cache agent and schema when config is valid."""
+        init_session_state()
         st.session_state.agent = None
         st.session_state.db = None
+        st.session_state.loaded_tenant_conn = None
         st.session_state.config = MagicMock()
         st.session_state.config.llm_provider = "groq"
         st.session_state.config.groq_api_key = "gsk_dummy_key"

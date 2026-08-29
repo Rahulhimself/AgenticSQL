@@ -102,6 +102,47 @@ def connect(config: Config) -> SQLDatabase:
         ) from e
 
 
+def normalize_connection_uri(uri: str) -> str:
+    """
+    Normalize connection URI schemes so SQLAlchemy uses the appropriate drivers.
+    
+    Transforms:
+      - postgres:// -> postgresql+psycopg2://
+      - postgresql:// (without driver) -> postgresql+psycopg2://
+      - mysql:// (without driver) -> mysql+pymysql://
+    """
+    url = (uri or "").strip()
+    if url.startswith("postgres://"):
+        url = "postgresql+psycopg2://" + url[len("postgres://"):]
+    elif url.startswith("postgresql://") and "+psycopg2" not in url and "+asyncpg" not in url and "+pg8000" not in url:
+        url = "postgresql+psycopg2://" + url[len("postgresql://"):]
+    elif url.startswith("mysql://") and "+pymysql" not in url and "+mysqldb" not in url and "+mariadbconnector" not in url:
+        url = "mysql+pymysql://" + url[len("mysql://"):]
+    return url
+
+
+def connect_from_uri(uri: str) -> SQLDatabase:
+    """
+    Connect to a database via URI string with error handling and a health check.
+
+    Args:
+        uri: Database connection URI string.
+
+    Returns:
+        An initialized SQLDatabase instance.
+    """
+    norm_uri = normalize_connection_uri(uri)
+    logger.info("Connecting to database from URI...")
+    try:
+        db = SQLDatabase.from_uri(norm_uri)
+        db.run("SELECT 1")
+        logger.info("Database connection successful. Dialect: %s", getattr(db, "dialect", "unknown"))
+        return db
+    except Exception as e:
+        logger.error("Failed to connect to database via URI: %s", e)
+        raise ConnectionError(f"Could not connect to database via URI: {e}") from e
+
+
 def get_schema_info(db: SQLDatabase) -> dict[str, str]:
     """
     Get structured schema information from the database.
@@ -121,3 +162,4 @@ def get_schema_info(db: SQLDatabase) -> dict[str, str]:
             schema[table] = f"Error retrieving schema: {e}"
 
     return schema
+

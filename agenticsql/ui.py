@@ -291,6 +291,8 @@ def init_session_state() -> None:
         st.session_state.current_user = None
     if "active_connection_id" not in st.session_state:
         st.session_state.active_connection_id = None
+    if "loaded_tenant_conn" not in st.session_state:
+        st.session_state.loaded_tenant_conn = None
 
 
 def render_login_screen() -> None:
@@ -326,6 +328,14 @@ def render_login_screen() -> None:
                         user = st.session_state.auth_db.authenticate_user(username_input, password_input)
                         if user:
                             st.session_state.current_user = user
+                            st.session_state.active_connection_id = None
+                            st.session_state.loaded_tenant_conn = None
+                            st.session_state.agent = None
+                            st.session_state.db = None
+                            st.session_state.schema_info = None
+                            st.session_state.messages = []
+                            st.session_state.last_sql = None
+                            st.session_state.last_df = None
                             st.toast(f"Welcome back, {user.username}!", icon="👋")
                             st.rerun()
                         else:
@@ -356,6 +366,14 @@ def render_login_screen() -> None:
                                 role=reg_role,
                             )
                             st.session_state.current_user = new_user
+                            st.session_state.active_connection_id = None
+                            st.session_state.loaded_tenant_conn = None
+                            st.session_state.agent = None
+                            st.session_state.db = None
+                            st.session_state.schema_info = None
+                            st.session_state.messages = []
+                            st.session_state.last_sql = None
+                            st.session_state.last_df = None
                             st.success(f"Account created successfully for {new_user.username}!")
                             st.rerun()
                         except ValueError as e:
@@ -364,14 +382,21 @@ def render_login_screen() -> None:
 
 def load_backend_for_tenant() -> tuple[Optional[AgenticSQLAgent], Optional[Any], Optional[str]]:
     """Load or switch the active database and agent for the logged-in tenant."""
-    if st.session_state.agent is not None and st.session_state.db is not None:
-        return st.session_state.agent, st.session_state.db, None
-
     user = st.session_state.current_user
     if not user:
         return None, None, "User not authenticated."
 
     conn_id = st.session_state.active_connection_id
+    current_target = (user.id, conn_id)
+
+    # Return cached backend only if the exact user & connection match
+    if (
+        st.session_state.get("loaded_tenant_conn") == current_target
+        and st.session_state.agent is not None
+        and st.session_state.db is not None
+        and st.session_state.schema_info is not None
+    ):
+        return st.session_state.agent, st.session_state.db, None
 
     try:
         config = st.session_state.config or Config.from_env()
@@ -385,31 +410,24 @@ def load_backend_for_tenant() -> tuple[Optional[AgenticSQLAgent], Optional[Any],
         elif provider == "openai" and not config.openai_api_key:
             return None, None, "OPENAI_API_KEY is missing from environment. Please add it to your .env file."
 
-        if conn_id is None:
-            db = connect(config)
-            llm = create_llm(config)
-            agent = AgenticSQLAgent(
-                llm=llm,
-                db=db,
-                verbose=False,
-                max_retries=config.max_retries,
-                enable_self_healing=config.enable_self_healing,
-                enable_schema_pruning=config.enable_schema_pruning,
-            )
-        else:
-            agent = st.session_state.tenant_mgr.get_agent(user, connection_id=conn_id, config=config)
-            db = st.session_state.tenant_mgr.connect_tenant_db(user, connection_id=conn_id, config=config)
+        agent = st.session_state.tenant_mgr.get_agent(user, connection_id=conn_id, config=config)
+        db = st.session_state.tenant_mgr.connect_tenant_db(user, connection_id=conn_id, config=config)
 
         st.session_state.agent = agent
         st.session_state.db = db
         st.session_state.db_connected = True
         st.session_state.schema_info = get_schema_info(db)
+        st.session_state.loaded_tenant_conn = current_target
 
         return agent, db, None
 
     except Exception as e:
         logger.error("Failed to load tenant backend: %s", e)
         st.session_state.db_connected = False
+        st.session_state.agent = None
+        st.session_state.db = None
+        st.session_state.schema_info = None
+        st.session_state.loaded_tenant_conn = None
         return None, None, str(e)
 
 
@@ -423,12 +441,23 @@ def load_backend() -> tuple[Optional[AgenticSQLAgent], Optional[Any], Optional[s
 def render_header(config: Optional[Config], is_connected: bool) -> None:
     """Render top header bar with branding and live status."""
     user = st.session_state.current_user
-    dialect_str = (getattr(st.session_state.db, "dialect", config.db_type) if config else "SQL").upper()
+    db_obj = st.session_state.get("db")
+    dialect_str = (getattr(db_obj, "dialect", config.db_type if config else "SQL")).upper() if db_obj else (config.db_type.upper() if config else "SQL")
     provider_str = (config.llm_provider if config else "Groq").upper()
     model_str = config.llm_model if config else "openai/gpt-oss-120b"
 
+    # Determine dynamic active database name
+    active_db_label = "Default DB"
+    if st.session_state.active_connection_id and user:
+        user_conns = st.session_state.auth_db.get_user_connections(user.id)
+        matched_c = next((c for c in user_conns if c.id == st.session_state.active_connection_id), None)
+        if matched_c:
+            active_db_label = matched_c.name
+    elif config and (config.db_name or config.db_server):
+        active_db_label = config.db_name or config.db_server
+
     status_html = (
-        f'<div class="status-pill"><span class="status-dot"></span>{dialect_str} ONLINE</div>'
+        f'<div class="status-pill"><span class="status-dot"></span>{dialect_str} ({active_db_label}) ONLINE</div>'
         if is_connected
         else '<div class="status-pill offline"><span class="status-dot"></span>OFFLINE</div>'
     )
@@ -474,6 +503,12 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                 st.session_state.current_user = None
                 st.session_state.messages = []
                 st.session_state.active_connection_id = None
+                st.session_state.loaded_tenant_conn = None
+                st.session_state.agent = None
+                st.session_state.db = None
+                st.session_state.schema_info = None
+                st.session_state.last_sql = None
+                st.session_state.last_df = None
                 st.rerun()
 
         st.markdown("---")
@@ -482,7 +517,8 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
         # Fetch registered connections for user
         user_conns = st.session_state.auth_db.get_user_connections(user.id) if user else []
 
-        db_options = {"default": f"Default Database ({config.db_name or config.db_type.upper()})"}
+        default_name = config.db_name if config and config.db_name else "Default Database"
+        db_options = {"default": f"Default Database ({default_name})"}
         for c in user_conns:
             db_options[c.id] = f"{c.name} ({c.db_type.upper()})"
 
@@ -497,8 +533,10 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
         target_conn_id = None if selected_choice == "default" else selected_choice
         if target_conn_id != st.session_state.active_connection_id:
             st.session_state.active_connection_id = target_conn_id
+            st.session_state.loaded_tenant_conn = None
             st.session_state.agent = None
             st.session_state.db = None
+            st.session_state.schema_info = None
             st.rerun()
 
         # Quick Delete Active Custom Database
@@ -506,8 +544,10 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
             if st.button("🗑️ Delete Selected Database", use_container_width=True, help="Remove this custom database connection"):
                 st.session_state.tenant_mgr.delete_connection(user.id, selected_choice)
                 st.session_state.active_connection_id = None
+                st.session_state.loaded_tenant_conn = None
                 st.session_state.agent = None
                 st.session_state.db = None
+                st.session_state.schema_info = None
                 st.success("Database connection deleted.")
                 st.rerun()
 
@@ -526,11 +566,13 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
 
                         if conn_type == "sqlite":
                             conn_server = ""
+                            conn_port = ""
                             conn_user = ""
                             conn_pass = ""
                             conn_driver = ""
                         else:
                             conn_server = st.text_input("Server / Host", value=config.db_server if config else "127.0.0.1")
+                            conn_port = st.text_input("Port (optional)", placeholder="e.g. 1433, 5432, 3306")
                             conn_user = st.text_input("Username", value=config.db_user if config else "")
                             conn_pass = st.text_input("Password", value=config.db_password if config else "", type="password")
                             conn_driver = st.text_input("Driver (for MSSQL)", value=config.db_driver if config else "ODBC+Driver+17+for+SQL+Server") if conn_type == "mssql" else ""
@@ -543,23 +585,29 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                             else:
                                 import urllib.parse
                                 from sqlalchemy import create_engine
+                                from agenticsql.database import normalize_connection_uri
 
                                 enc_user = urllib.parse.quote_plus(conn_user)
                                 enc_pass = urllib.parse.quote_plus(conn_pass)
                                 enc_db = urllib.parse.quote_plus(conn_dbname)
+                                port_val = conn_port.strip() if 'conn_port' in locals() and conn_port.strip() else ""
 
                                 if conn_type == "sqlite":
                                     uri = f"sqlite:///{conn_dbname}"
                                 elif conn_type == "postgresql":
-                                    uri = f"postgresql+psycopg2://{enc_user}:{enc_pass}@{conn_server}:5432/{enc_db}"
+                                    p_str = f":{port_val}" if port_val else ":5432"
+                                    uri = f"postgresql+psycopg2://{enc_user}:{enc_pass}@{conn_server}{p_str}/{enc_db}"
                                 elif conn_type == "mysql":
-                                    uri = f"mysql+pymysql://{enc_user}:{enc_pass}@{conn_server}:3306/{enc_db}"
+                                    p_str = f":{port_val}" if port_val else ":3306"
+                                    uri = f"mysql+pymysql://{enc_user}:{enc_pass}@{conn_server}{p_str}/{enc_db}"
                                 else:  # mssql
-                                    uri = f"mssql+pyodbc://{enc_user}:{enc_pass}@{conn_server}/{enc_db}?driver={conn_driver}&TrustServerCertificate=yes"
+                                    p_str = f":{port_val}" if port_val else ""
+                                    uri = f"mssql+pyodbc://{enc_user}:{enc_pass}@{conn_server}{p_str}/{enc_db}?driver={conn_driver}&TrustServerCertificate=yes"
 
+                                norm_uri = normalize_connection_uri(uri)
                                 try:
                                     # Pre-flight connection test
-                                    test_engine = create_engine(uri)
+                                    test_engine = create_engine(norm_uri)
                                     with test_engine.connect() as test_conn:
                                         pass
 
@@ -567,12 +615,16 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                                         user_id=user.id,
                                         name=conn_name,
                                         db_type=conn_type,
-                                        db_uri=uri,
+                                        db_uri=norm_uri,
                                         db_server=conn_server,
                                         db_name=conn_dbname,
                                     )
                                     st.success(f"Connected and registered '{new_c.name}' successfully!")
                                     st.session_state.active_connection_id = new_c.id
+                                    st.session_state.loaded_tenant_conn = None
+                                    st.session_state.agent = None
+                                    st.session_state.db = None
+                                    st.session_state.schema_info = None
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Connection test failed: {e}")
@@ -589,8 +641,10 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                                 st.error("Name and Connection URI are required.")
                             else:
                                 from sqlalchemy import create_engine
+                                from agenticsql.database import normalize_connection_uri
+                                norm_uri = normalize_connection_uri(conn_uri)
                                 try:
-                                    test_engine = create_engine(conn_uri)
+                                    test_engine = create_engine(norm_uri)
                                     with test_engine.connect() as test_conn:
                                         pass
 
@@ -598,10 +652,14 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                                         user_id=user.id,
                                         name=conn_name,
                                         db_type=conn_type,
-                                        db_uri=conn_uri,
+                                        db_uri=norm_uri,
                                     )
                                     st.success(f"Registered connection '{new_c.name}'!")
                                     st.session_state.active_connection_id = new_c.id
+                                    st.session_state.loaded_tenant_conn = None
+                                    st.session_state.agent = None
+                                    st.session_state.db = None
+                                    st.session_state.schema_info = None
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Connection failed: {e}")
@@ -621,8 +679,10 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
                                 st.session_state.tenant_mgr.delete_connection(user.id, c.id)
                                 if st.session_state.active_connection_id == c.id:
                                     st.session_state.active_connection_id = None
-                                    st.session_state.agent = None
-                                    st.session_state.db = None
+                                st.session_state.loaded_tenant_conn = None
+                                st.session_state.agent = None
+                                st.session_state.db = None
+                                st.session_state.schema_info = None
                                 st.success(f"Deleted {c.name}")
                                 st.rerun()
 
@@ -639,9 +699,11 @@ def render_sidebar(config: Optional[Config], db: Optional[Any]) -> None:
 
         if st.button("🔄 Refresh Schema & Config", use_container_width=True):
             st.session_state.config = Config.from_env()
+            st.session_state.loaded_tenant_conn = None
             st.session_state.agent = None
             st.session_state.db = None
             st.session_state.schema_info = None
+            st.session_state.tenant_mgr.clear_user_cache()
             st.success("Config & database schema reloaded!")
             st.rerun()
 
@@ -957,7 +1019,22 @@ def render_chat_tab(agent: Optional[AgenticSQLAgent]) -> None:
 def render_schema_tab(db: Optional[Any]) -> None:
     """Render Tab 2: Live Database Schema Browser."""
     st.markdown("### 🗄️ Database Schema Explorer")
-    st.caption("Inspect live tables, data types, foreign keys, and preview data.")
+    st.caption("Inspect live tables, data types, foreign keys, and preview data from the active database.")
+
+    user = st.session_state.current_user
+    db_label = "Default Database"
+    db_type_label = getattr(db, "dialect", "SQL").upper() if db else "SQL"
+
+    if st.session_state.active_connection_id and user:
+        user_conns = st.session_state.auth_db.get_user_connections(user.id)
+        matched_c = next((c for c in user_conns if c.id == st.session_state.active_connection_id), None)
+        if matched_c:
+            db_label = f"Custom Connection: {matched_c.name}"
+            db_type_label = matched_c.db_type.upper()
+    elif st.session_state.config:
+        cfg = st.session_state.config
+        db_label = f"Default Database ({cfg.db_name or cfg.db_server})"
+        db_type_label = (getattr(db, "dialect", cfg.db_type) if db else cfg.db_type).upper()
 
     if not db or not st.session_state.schema_info:
         st.info("Database not connected. Schema information unavailable.")
@@ -965,6 +1042,15 @@ def render_schema_tab(db: Optional[Any]) -> None:
 
     schema_dict = st.session_state.schema_info
     tables = list(schema_dict.keys())
+
+    st.markdown(
+        f'<div style="padding: 8px 14px; background: #1e1f20; border: 1px solid #2d2f31; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">'
+        f'🔗 <strong>Active Target:</strong> <code>{db_label}</code> &nbsp;|&nbsp; '
+        f'🔤 <strong>Dialect:</strong> <code>{db_type_label}</code> &nbsp;|&nbsp; '
+        f'📊 <strong>Discovered Tables:</strong> <code>{len(tables)}</code>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     if not tables:
         st.warning("No tables discovered in the connected database.")
@@ -982,10 +1068,20 @@ def render_schema_tab(db: Optional[Any]) -> None:
     with col_right:
         if selected_table and st.session_state.agent:
             st.markdown(f"#### 🔍 Sample Data: `{selected_table}` (Top 10 Rows)")
-            preview_sql = f"SELECT * FROM {selected_table} LIMIT 10;"
-            dialect = getattr(db, "dialect", "")
-            if "mssql" in str(dialect).lower():
-                preview_sql = f"SELECT TOP (10) * FROM [{selected_table}];"
+            dialect_str = str(getattr(db, "dialect", "")).lower()
+
+            if "mssql" in dialect_str:
+                if "." in selected_table:
+                    parts = selected_table.split(".", 1)
+                    preview_sql = f"SELECT TOP (10) * FROM [{parts[0]}].[{parts[1]}];"
+                else:
+                    preview_sql = f"SELECT TOP (10) * FROM [{selected_table}];"
+            elif "mysql" in dialect_str:
+                preview_sql = f"SELECT * FROM `{selected_table}` LIMIT 10;"
+            elif "postgres" in dialect_str:
+                preview_sql = f'SELECT * FROM "{selected_table}" LIMIT 10;'
+            else:  # sqlite and others
+                preview_sql = f"SELECT * FROM [{selected_table}] LIMIT 10;"
 
             preview_df = st.session_state.agent.execute_sql(preview_sql)
             if preview_df is not None and not preview_df.empty:

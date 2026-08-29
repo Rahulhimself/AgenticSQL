@@ -38,7 +38,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
-          pytest tests/test_agent.py tests/test_guardrails.py tests/test_config.py tests/test_visualization.py tests/test_auth_tenancy.py tests/test_fewshot_profiler.py -v
+          pytest tests/test_agent.py tests/test_guardrails.py tests/test_config.py tests/test_visualization.py tests/test_auth_tenancy.py tests/test_fewshot_profiler.py tests/test_dynamic_switching.py tests/test_ui.py -v
 
       - name: Run Evaluation Harness Tests
         env:

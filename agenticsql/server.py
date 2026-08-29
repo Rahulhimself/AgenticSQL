@@ -380,6 +380,14 @@ def create_app(config: Config) -> FastAPI:
         from dataclasses import asdict
         return {"status": "success", "connection": asdict(conn)}
 
+    @app.delete("/api/tenants/connections/{connection_id}")
+    async def delete_connection(connection_id: int, user: User = Depends(get_current_user)):
+        """Delete a tenant database connection."""
+        success = _tenant_manager.delete_connection(user.id, connection_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Connection not found or already deleted.")
+        return {"status": "success", "message": f"Connection {connection_id} deleted."}
+
     @app.get("/api/tenants/history")
     async def get_user_history(user: User = Depends(get_current_user)):
         """Get the current user's isolated query history."""

@@ -15,7 +15,7 @@ from sqlalchemy import create_engine
 
 from .auth import AuthDatabase, User, UserConnection, UserQueryRecord
 from .config import Config
-from .database import connect as default_connect
+from .database import connect as default_connect, connect_from_uri, normalize_connection_uri
 from .llm import create_llm
 from .agent import AgenticSQLAgent
 
@@ -48,11 +48,12 @@ class TenantManager:
         is_default: bool = False,
     ) -> UserConnection:
         """Register a new database connection for a user."""
+        norm_uri = normalize_connection_uri(db_uri)
         return self.auth_db.add_user_connection(
             user_id=user_id,
             name=name,
             db_type=db_type,
-            db_uri=db_uri,
+            db_uri=norm_uri,
             db_server=db_server,
             db_name=db_name,
             is_default=is_default,
@@ -64,6 +65,17 @@ class TenantManager:
         self._db_cache.pop(cache_key, None)
         self._agent_cache.pop(cache_key, None)
         return self.auth_db.delete_user_connection(user_id, connection_id)
+
+    def clear_user_cache(self, user_id: Optional[int] = None) -> None:
+        """Clear cached database connections and agents for a user or all users."""
+        if user_id is None:
+            self._db_cache.clear()
+            self._agent_cache.clear()
+        else:
+            keys_to_remove = [k for k in self._db_cache if k[0] == user_id]
+            for k in keys_to_remove:
+                self._db_cache.pop(k, None)
+                self._agent_cache.pop(k, None)
 
     def connect_tenant_db(
         self,
@@ -96,16 +108,14 @@ class TenantManager:
 
         # Connect to tenant database URI
         try:
-            logger.info("Connecting to custom database '%s' for user '%s'", matched.name, user.username)
-            engine = create_engine(matched.db_uri)
-            db = SQLDatabase(engine)
-            # Tag dialect attribute for downstream prompt helpers
-            db.dialect = matched.db_type
+            logger.info("Connecting to custom database '%s' for user '%s' (%s)", matched.name, user.username, matched.db_type)
+            db = connect_from_uri(matched.db_uri)
             self._db_cache[cache_key] = db
             return db
         except Exception as e:
             logger.error("Failed to connect to tenant database '%s': %s", matched.name, e)
             raise RuntimeError(f"Could not connect to database '{matched.name}': {e}")
+
 
     def get_agent(
         self,
