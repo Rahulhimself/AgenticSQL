@@ -91,7 +91,7 @@ class Config:
         else:
             provider = "groq"
 
-        default_model = "llama-3.3-70b-versatile" if provider == "groq" else (
+        default_model = "openai/gpt-oss-120b" if provider == "groq" else (
             "gemini-2.5-flash" if provider == "gemini" else "gpt-4o-mini"
         )
         llm_model = os.getenv("LLM_MODEL") or default_model
