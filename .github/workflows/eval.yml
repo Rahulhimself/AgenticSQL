@@ -11,10 +11,20 @@ jobs:
   evaluate:
     name: Run Benchmark & Quality Gate
     runs-on: ubuntu-latest
+    env:
+      LLM_PROVIDER: mock
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'gsk_mock_ci_key' }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY || '' }}
+      DB_TYPE: sqlite
+      DB_NAME: data/test_ci.db
+      DB_USER: test_user
+      DB_PASSWORD: test_password
+      DB_SERVER: 127.0.0.1
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
+
 
     steps:
       - name: Checkout Codebase
