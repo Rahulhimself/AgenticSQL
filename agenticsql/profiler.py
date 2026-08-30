@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProfileReport:
-    """Detailed performance profiling report for an executed SQL query."""
+    """
+    Detailed performance profiling report for an executed SQL query.
+    Contains cost rating (LOW/MEDIUM/HIGH), anti-pattern warnings, and optimization tips.
+    """
     sql: str
     cost_rating: str  # "LOW", "MEDIUM", "HIGH"
     warnings: list[str] = field(default_factory=list)
@@ -32,7 +35,8 @@ class ProfileReport:
 
 class QueryProfiler:
     """
-    Analyzes SQL queries for database performance risks and suggests optimizations.
+    AST-based Query Performance Profiler and Index Suggester.
+    Detects unbounded table scans, SELECT * usage, wildcard searches, and unconstrained JOINs.
     """
 
     def __init__(self, dialect: Optional[str] = "mssql"):

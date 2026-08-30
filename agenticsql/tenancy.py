@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 class TenantManager:
     """
     Manages tenant contexts, dynamic database connections, and per-user agent caching.
+    Ensures query history isolation and instant switching across connected databases.
     """
 
     def __init__(self, auth_db: Optional[AuthDatabase] = None):

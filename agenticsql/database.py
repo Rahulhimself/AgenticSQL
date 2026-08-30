@@ -24,7 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 def _get_troubleshooting_tips(config: Config, error: Exception) -> list[str]:
-    """Generate dialect- and provider-aware troubleshooting steps for connection errors."""
+    """
+    Generate dialect- and provider-aware troubleshooting steps for connection errors.
+    Returns actionable advice for cloud firewalls, SSL requirements, and driver setup.
+    """
     db_type = config.db_type.lower().strip()
     is_uri = bool(config.database_url)
 

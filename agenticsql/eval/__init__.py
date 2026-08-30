@@ -1,17 +1,7 @@
 """
 AgenticSQL Evaluation Pipeline Package.
-
-Exports:
-- GoldenDataset, GoldenTestCase, SchemaLinkingTarget, ExecutionExpectation, SafetyExpectation
-- DatabaseSandbox, create_all_sandboxes
-- SQLASTMatcher, ASTComparisonResult
-- ExecutionAccuracyEvaluator, ExecutionResult
-- SchemaLinkingEvaluator, SchemaLinkingResult
-- GuardrailsEvaluator, GuardrailBenchmarkMetrics
-- LLMJudgeEvaluator, FaithfulnessVerdict, SemanticParityVerdict, AmbiguityVerdict
-- SQLSyntaxMetric, ASTSemanticMatchMetric, ExecutionAccuracyMetric, TableGroundedFaithfulnessMetric
-- LangfuseEvalLogger
-- EvaluationRunner, TestCaseResult, BenchmarkSummary
+Provides comprehensive benchmarking: AST semantic matching, execution parity,
+schema linking F1, safety guardrails testing, LLM-as-a-judge, DeepEval, and Langfuse logging.
 """
 
 from .dataset import (

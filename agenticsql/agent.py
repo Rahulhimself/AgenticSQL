@@ -93,13 +93,8 @@ def _apply_guardrails(db: SQLDatabase) -> SQLDatabase:
 
 class AgenticSQLAgent:
     """
-    Modern SQL Agent with conversation memory, guardrails, and tool-calling execution.
-
-    Usage:
-        agent = AgenticSQLAgent(llm=llm, db=db)
-        response = agent.chat("How many customers are there?")
-        print(response["output"])
-        print(response["sql"])  # List of SQL queries executed
+    Modern SQL Agent with conversation memory, AST guardrails, self-healing reflection, and performance profiling.
+    Translates natural language questions to dialect-optimized SQL and coordinates query execution.
     """
 
     def __init__(
@@ -114,15 +109,8 @@ class AgenticSQLAgent:
         enable_schema_pruning: bool = True,
     ):
         """
-        Args:
-            llm: The initialized LLM instance.
-            db: The database connection.
-            verbose: If True, print agent's intermediate reasoning steps.
-            memory_window: Number of conversation turns to retain for context.
-            agent_type: 'tool-calling' (default) or 'zero-shot-react-description'.
-            max_retries: Max number of self-healing attempts on query errors.
-            enable_self_healing: Enable automated error reflection and query repair.
-            enable_schema_pruning: Dynamically prune irrelevant tables for large schemas.
+        Initialize AgenticSQL agent with LLM, database proxy, few-shot store, and query profiler.
+        Configures dialect-aware prompts and monkey-patches safe AST execution hooks onto the database.
         """
         self.llm = llm
         self.db = db

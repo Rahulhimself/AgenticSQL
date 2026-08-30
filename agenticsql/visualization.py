@@ -23,10 +23,8 @@ logger = logging.getLogger(__name__)
 
 def dataframe_to_dict(df: pd.DataFrame) -> dict:
     """
-    Convert a pandas DataFrame to a JSON-serializable dictionary.
-
-    Returns:
-        A dict with 'columns' (list of str) and 'rows' (list of list of primitive types).
+    Convert a pandas DataFrame into a JSON-serializable dictionary with columns and rows.
+    Safely coerces timestamps, NaN values, and non-primitive dtypes into standard JSON formats.
     """
     if df is None or df.empty:
         return {"columns": [], "rows": []}
@@ -48,14 +46,18 @@ def dataframe_to_dict(df: pd.DataFrame) -> dict:
 
 
 def dataframe_to_csv(df: pd.DataFrame) -> str:
-    """Convert a pandas DataFrame to a CSV string."""
+    """
+    Convert a pandas DataFrame into a CSV string without index columns.
+    """
     if df is None or df.empty:
         return ""
     return df.to_csv(index=False)
 
 
 def dataframe_to_json(df: pd.DataFrame) -> str:
-    """Convert a pandas DataFrame to a formatted JSON string (records format)."""
+    """
+    Convert a pandas DataFrame into a formatted JSON records string.
+    """
     if df is None or df.empty:
         return "[]"
     data = dataframe_to_dict(df)
@@ -64,7 +66,9 @@ def dataframe_to_json(df: pd.DataFrame) -> str:
 
 
 def dataframe_to_markdown(df: pd.DataFrame) -> str:
-    """Convert a pandas DataFrame to a Markdown table string."""
+    """
+    Convert a pandas DataFrame into a clean Markdown table string.
+    """
     if df is None or df.empty:
         return ""
     return df.to_markdown(index=False)

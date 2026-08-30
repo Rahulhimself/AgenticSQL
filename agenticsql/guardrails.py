@@ -71,7 +71,10 @@ FALLBACK_BLOCKED_PATTERNS: list[tuple[str, str]] = [
 
 
 def normalize_dialect(dialect: Optional[str] = None) -> str:
-    """Normalize a database dialect string into a sqlglot-compatible dialect identifier."""
+    """
+    Map dialect names to canonical sqlglot dialect identifiers.
+    Normalizes PostgreSQL, MySQL, T-SQL, SQLite, and cloud DB variants.
+    """
     if not dialect:
         return "tsql"
     d = dialect.lower().strip()
@@ -91,7 +94,10 @@ def normalize_dialect(dialect: Optional[str] = None) -> str:
 
 
 class QueryAuditLog:
-    """Logs all SQL queries to a file for auditing and forensics."""
+    """
+    Persistent audit logger for all query execution attempts.
+    Records timestamps, queries, decisions (ALLOWED/BLOCKED), and security reasons.
+    """
 
     def __init__(self, log_dir: str = "logs"):
         self.log_dir = Path(log_dir)
@@ -100,12 +106,8 @@ class QueryAuditLog:
 
     def log_query(self, sql: str, status: str, reason: str = "") -> None:
         """
-        Log a query execution attempt.
-
-        Args:
-            sql: The SQL query string.
-            status: 'ALLOWED' or 'BLOCKED'.
-            reason: Reason for blocking (if blocked).
+        Log a single query attempt with timestamp and security classification.
+        Appends entry safely to the query audit log file.
         """
         timestamp = datetime.now().isoformat()
 
@@ -127,7 +129,9 @@ _audit_log: Optional[QueryAuditLog] = None
 
 
 def get_audit_log() -> QueryAuditLog:
-    """Get or create the global audit log."""
+    """
+    Retrieve or lazily initialize the singleton QueryAuditLog instance.
+    """
     global _audit_log
     if _audit_log is None:
         _audit_log = QueryAuditLog()
@@ -136,16 +140,8 @@ def get_audit_log() -> QueryAuditLog:
 
 def validate_sql(sql: str, dialect: Optional[str] = None) -> tuple[bool, str]:
     """
-    Validate a SQL query against safety rules using AST inspection and dialect parsing.
-
-    Args:
-        sql: The SQL query to validate.
-        dialect: Optional SQL dialect ('mssql', 'postgresql', 'mysql', 'sqlite', etc.).
-
-    Returns:
-        A tuple of (is_safe, reason).
-        is_safe is True if the query is safe to execute.
-        reason contains the blocking reason if not safe, or empty string.
+    Validate a SQL query against safety rules using sqlglot AST inspection.
+    Returns (is_safe, reason) ensuring strict read-only compliance and no data modifications.
     """
     sql_stripped = sql.strip()
 

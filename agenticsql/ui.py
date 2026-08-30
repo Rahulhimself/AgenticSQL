@@ -261,7 +261,10 @@ CUSTOM_CSS = """
 
 
 def init_session_state() -> None:
-    """Initialize Streamlit session state variables."""
+    """
+    Initialize Streamlit session state storage for chat messages, active connections,
+    authenticated user context, cached DataFrames, and schema details.
+    """
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "last_sql" not in st.session_state:
@@ -296,7 +299,9 @@ def init_session_state() -> None:
 
 
 def render_login_screen() -> None:
-    """Render authentication modal when user is not logged in."""
+    """
+    Render authentication view with sign-in and user registration tabs for tenant access.
+    """
     st.markdown(
         """
         <div style="text-align: center; margin-top: 2rem; margin-bottom: 1.5rem;">

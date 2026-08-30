@@ -33,10 +33,8 @@ DEFAULT_JWT_SECRET = os.getenv("JWT_SECRET", "agenticsql-super-secret-jwt-key-20
 
 def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
     """
-    Hash a password with PBKDF2-HMAC-SHA256 and a random salt.
-
-    Returns:
-        (password_hash, salt)
+    Hash a plaintext password using PBKDF2-HMAC-SHA256 with 100,000 iterations and salt.
+    Returns a tuple of (hex_digest, salt).
     """
     if salt is None:
         salt = secrets.token_hex(16)
@@ -51,14 +49,16 @@ def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
 
 
 def verify_password(password: str, expected_hash: str, salt: str) -> bool:
-    """Verify a plain password against an expected PBKDF2 hash and salt."""
+    """
+    Verify a plaintext password against an expected PBKDF2 hash and salt using constant-time compare.
+    """
     actual_hash, _ = hash_password(password, salt=salt)
     return hmac.compare_digest(actual_hash, expected_hash)
 
 
 def create_jwt_token(payload: dict, secret: str = DEFAULT_JWT_SECRET, expires_in_seconds: int = 86400) -> str:
     """
-    Create a signed JWT token using HMAC-SHA256.
+    Generate an HMAC-SHA256 signed JSON Web Token (JWT) with expiration timestamp.
     """
     header = {"alg": "HS256", "typ": "JWT"}
     payload_copy = payload.copy()
@@ -80,9 +80,7 @@ def create_jwt_token(payload: dict, secret: str = DEFAULT_JWT_SECRET, expires_in
 
 def decode_jwt_token(token: str, secret: str = DEFAULT_JWT_SECRET) -> Optional[dict]:
     """
-    Verify and decode a signed JWT token.
-
-    Returns payload dict if valid and unexpired, or None if invalid.
+    Verify signature and expiration of a JWT token, returning the payload if valid.
     """
     try:
         parts = token.split(".")
@@ -126,7 +124,7 @@ def decode_jwt_token(token: str, secret: str = DEFAULT_JWT_SECRET) -> Optional[d
 
 @dataclass
 class User:
-    """User account data model."""
+    """User account entity representing registered tenants and administrators."""
     id: int
     username: str
     email: str
@@ -136,7 +134,7 @@ class User:
 
 @dataclass
 class UserConnection:
-    """A registered database connection for a user."""
+    """Registered database connection profile belonging to a user."""
     id: int
     user_id: int
     name: str
@@ -146,6 +144,7 @@ class UserConnection:
     db_name: str = ""
     is_default: bool = False
     created_at: str = ""
+
 
 
 @dataclass

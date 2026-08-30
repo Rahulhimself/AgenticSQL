@@ -20,15 +20,7 @@ logger = logging.getLogger(__name__)
 def create_llm(config: Config) -> BaseChatModel:
     """
     Initialize the configured LLM provider (Groq, Gemini, OpenAI, or Mock).
-
-    Args:
-        config: Application configuration with provider, API key, and model settings.
-
-    Returns:
-        An initialized LangChain BaseChatModel instance.
-
-    Raises:
-        RuntimeError: If initialization fails, with helpful troubleshooting tips.
+    Instantiates LangChain chat models configured with project temperature and API keys.
     """
     provider = (config.llm_provider or "groq").lower().strip()
 

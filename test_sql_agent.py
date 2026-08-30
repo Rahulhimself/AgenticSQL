@@ -1,3 +1,8 @@
+"""
+Test script for direct SQL Sub-Agent connection and basic query execution.
+Validates database credentials and zero-shot ReAct agent response generation.
+"""
+
 import os
 import urllib.parse
 from dotenv import load_dotenv
@@ -5,57 +10,52 @@ from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-#load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-#verify API key is detected
+# Verify Google GenAI API key exists before connecting to Gemini
 if not os.getenv("GOOGLE_API_KEY"):
     raise ValueError("GOOGLE_API_KEY is missing from your .env file!")
 
-#configure MS SQL Server Connection
+# Database configuration settings for local MS SQL Server
 DB_USER = "langchain_agent"
-# Fetch the password securely from the .env file
 raw_password = os.getenv("DB_PASSWORD")
-
-#add a safety check just in case the .env file is missing the variable
 if not raw_password:
     raise ValueError("DB_PASSWORD is missing from your .env file!")
 
-#no 'tcp:' prefix Just the IP address
 DB_SERVER = "127.0.0.1" 
 DB_NAME = "sql_practise"
 
+# Construct ODBC connection string for SQL Server with SSL certificate trust
 connection_string = (
     f"mssql+pyodbc://{DB_USER}:{raw_password}@{DB_SERVER}/{DB_NAME}"
     "?driver=ODBC+Driver+17+for+SQL+Server&TrustServerCertificate=yes"
 )
 
-#initialize the SQLDatabase wrapper
+# Initialize LangChain SQLDatabase connector
 db = SQLDatabase.from_uri(connection_string)
 
-#initialize the Gemini LLM
+# Initialize Gemini LLM with zero temperature for deterministic SQL generation
 llm = ChatGoogleGenerativeAI(
     model="gemini-3.6-flash", 
     temperature=0
 )
 
-#create the SQL Agent
+# Create zero-shot ReAct SQL agent with error parsing enabled
 sql_sub_agent = create_sql_agent(
     llm=llm,
     db=db,
-    agent_type="zero-shot-react-description", # Changed from tool-calling
+    agent_type="zero-shot-react-description",
     verbose=False,
-    handle_parsing_errors=True # Highly recommended for ReAct agents
+    handle_parsing_errors=True
 )
 
-#run a Test Query
+# Run a test query if executed directly from the terminal
 if __name__ == "__main__":
     print("Testing SQL Sub-Agent connection...")
-    
     test_prompt = "List all the tables present in this database and give me the datatypes for each column."
-    
     response = sql_sub_agent.invoke({"input": test_prompt})
-    
     print("\n--- Final Agent Response ---")
     print(response["output"])
+
 

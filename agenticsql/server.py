@@ -34,7 +34,10 @@ logger = logging.getLogger(__name__)
 
 
 class RateLimiter:
-    """In-memory sliding-window request rate limiter."""
+    """
+    In-memory sliding-window request rate limiter per client IP.
+    Restricts request volume to prevent abuse and API rate-limit starvation.
+    """
 
     def __init__(self, max_requests: int = 60, window_seconds: int = 60):
         self.max_requests = max_requests
@@ -42,6 +45,9 @@ class RateLimiter:
         self._records: dict[str, list[float]] = {}
 
     def is_allowed(self, client_id: str) -> bool:
+        """
+        Check if client has remaining request quota within the active sliding time window.
+        """
         now = time.time()
         timestamps = self._records.get(client_id, [])
         valid_timestamps = [t for t in timestamps if now - t < self.window_seconds]

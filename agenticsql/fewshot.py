@@ -19,7 +19,10 @@ DEFAULT_FEWSHOT_PATH = Path(__file__).resolve().parent.parent / "data" / "fewsho
 
 @dataclass
 class FewShotExample:
-    """A curated natural language question to SQL exemplar."""
+    """
+    A curated natural language question to SQL exemplar.
+    Includes target dialect, query categorization, and associated tables for few-shot prompting.
+    """
     question: str
     sql: str
     dialect: str = "mssql"

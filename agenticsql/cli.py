@@ -74,7 +74,10 @@ BANNER = r"""[bold blue]
 
 
 def run_repl(config: Config) -> None:
-    """Run the interactive REPL (Read-Eval-Print Loop)."""
+    """
+    Start the interactive rich terminal REPL (Read-Eval-Print Loop).
+    Handles user chat inputs, slash commands (/help, /schema, /export, /chart), and formatted table outputs.
+    """
     console.print(BANNER)
     console.print(
         Panel(

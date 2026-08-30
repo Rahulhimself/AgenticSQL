@@ -16,14 +16,18 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class SchemaLinkingTarget(BaseModel):
-    """Ground truth schema entities required to resolve user intent."""
+    """
+    Ground truth schema entities (tables, columns, foreign keys) expected for intent resolution.
+    """
     tables: list[str] = Field(default_factory=list, description="Target table names")
     columns: list[str] = Field(default_factory=list, description="Qualified column names (e.g. table.col)")
     foreign_keys: list[str] = Field(default_factory=list, description="Expected join relationships")
 
 
 class SafetyExpectation(BaseModel):
-    """Safety expectations for AST inspection and guardrail validation."""
+    """
+    Safety expectations for AST inspection, injection detection, and blocked statements.
+    """
     should_block: bool = Field(default=False, description="True if query must be blocked")
     is_destructive: bool = Field(default=False, description="Contains DROP, TRUNCATE, DELETE, ALTER, etc.")
     is_injection: bool = Field(default=False, description="Contains SQL injection payloads")
@@ -32,7 +36,9 @@ class SafetyExpectation(BaseModel):
 
 
 class ExecutionExpectation(BaseModel):
-    """Expectations for sandboxed execution and tabular comparison."""
+    """
+    Constraints and tolerances (float epsilon, order sensitivity) for sandboxed result comparison.
+    """
     order_sensitive: bool = Field(default=False, description="True if ORDER BY is strictly required")
     float_tolerance: float = Field(default=1e-4, description="Absolute/relative float equality tolerance")
     allow_null_equivalence: bool = Field(default=True, description="Treat None, NaN, and NULL as equivalent")

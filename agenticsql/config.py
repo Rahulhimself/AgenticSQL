@@ -29,7 +29,10 @@ DEFAULT_PORTS: dict[str, int] = {
 
 @dataclass
 class Config:
-    """Application configuration loaded from environment variables."""
+    """
+    Application configuration loaded from environment variables (.env).
+    Holds LLM credentials, database connection parameters, and agent execution settings.
+    """
 
     # API & LLM Provider Settings
     llm_provider: str = "groq"  # 'groq', 'gemini', 'openai', 'mock'
@@ -66,7 +69,10 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
-        """Load configuration from environment variables."""
+        """
+        Instantiate Config by parsing environment variables from .env file.
+        Auto-detects active LLM providers and database connection details.
+        """
         load_dotenv()
 
         port_str = os.getenv("DB_PORT", "").strip()
@@ -77,6 +83,7 @@ class Config:
         google_key = os.getenv("GOOGLE_API_KEY", "").strip()
         openai_key = os.getenv("OPENAI_API_KEY", "").strip()
 
+        # Determine the primary LLM provider based on config and available API keys
         if raw_provider in ("groq", "gemini", "openai", "mock", "fake"):
             if raw_provider == "groq" and not groq_key and google_key:
                 provider = "gemini"
@@ -91,6 +98,7 @@ class Config:
         else:
             provider = "groq"
 
+        # Select standard default model for the resolved provider
         default_model = "openai/gpt-oss-120b" if provider == "groq" else (
             "gemini-2.5-flash" if provider == "gemini" else "gpt-4o-mini"
         )
@@ -124,7 +132,10 @@ class Config:
         return config
 
     def validate(self) -> None:
-        """Validate that all required configuration values are present."""
+        """
+        Validate that all required credentials and database parameters are present.
+        Raises ValueError with clear guidance if mandatory fields are missing.
+        """
         errors: list[str] = []
 
         # Validate LLM API key based on selected provider
